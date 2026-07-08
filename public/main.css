@@ -245,7 +245,15 @@ button.selected {
   background: var(--red);
 }
 
+.practice-window.syntax-highlighting {
+  height: calc(1.45em * 12);
+  font-size: clamp(1rem, 1.55vw, 1.45rem);
+  line-height: 1.45;
+}
+
 .practice-window.syntax-highlighting .word-stream {
+  overflow-wrap: normal;
+  tab-size: 2;
   text-align: left;
   white-space: pre-wrap;
 }
@@ -364,6 +372,12 @@ button.selected {
     height: calc(1.48em * 7);
     font-size: clamp(1.45rem, 6vw, 2.35rem);
     line-height: 1.48;
+  }
+
+  .practice-window.syntax-highlighting {
+    height: calc(1.45em * 10);
+    font-size: clamp(0.95rem, 3.8vw, 1.3rem);
+    line-height: 1.45;
   }
 
   .word-stream {

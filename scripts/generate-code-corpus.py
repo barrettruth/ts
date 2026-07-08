@@ -110,8 +110,8 @@ def validate(path, language, code):
         fail(f"{path}: snippet length outside 40-700 characters")
     if "\r" in code or "\t" in code:
         fail(f"{path}: snippets must use Unix newlines and spaces")
-    if any(len(line) > 100 for line in code.splitlines()):
-        fail(f"{path}: snippet line exceeds 100 characters")
+    if any(len(line) > 88 for line in code.splitlines()):
+        fail(f"{path}: snippet line exceeds 88 characters")
     if re.search(r"password|secret|token|api[_-]?key", code, re.IGNORECASE):
         fail(f"{path}: snippet contains sensitive-looking text")
     markers = {

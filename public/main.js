@@ -412,6 +412,34 @@ function streamChar(index) {
   return streamTextUntil(index).at(index);
 }
 
+function skipLeadingIndent(index) {
+  if (!isCodeLevel() || streamChar(index - 1) !== "\n") {
+    return index;
+  }
+
+  let next = index;
+  while (streamChar(next) === " ") {
+    next += 1;
+  }
+  return next;
+}
+
+function previousTypingCursor(index) {
+  if (!isCodeLevel()) {
+    return Math.max(index - 1, 0);
+  }
+
+  let previous = Math.max(index - 1, 0);
+  while (previous > 0 && streamChar(previous) === " ") {
+    previous -= 1;
+  }
+  return streamChar(previous) === "\n" ? previous : Math.max(index - 1, 0);
+}
+
+function nextTypingCursor(index) {
+  return skipLeadingIndent(index + 1);
+}
+
 function streamWindow() {
   const start = Math.max(cursor - 360, 0);
   const end = cursor + 900;
@@ -640,7 +668,7 @@ function handleKeydown(event) {
 
   if (event.key === "Backspace") {
     event.preventDefault();
-    cursor = Math.max(cursor - 1, 0);
+    cursor = previousTypingCursor(cursor);
     lastWrong = null;
     render();
     return;
@@ -663,7 +691,7 @@ function handleKeydown(event) {
       startedAt = performance.now();
       now = startedAt;
     }
-    cursor += 1;
+    cursor = nextTypingCursor(cursor);
     lastWrong = null;
   } else {
     errors += 1;
