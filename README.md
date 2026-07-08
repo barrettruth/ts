@@ -31,7 +31,7 @@ the selected keyboard layout (for example, "home" tests asdf/aeou on QWERTY/Dvor
 ## Baremak
 
 My custom layout "Baremak" keeps Colemak-DH letters and uses a custom layer for
-convenience.
+convenience. See [my config](https://forge.barrettruth.com/barrettruth/nix/src/commit/7c01a83254aafceac8ae81400cdfb13fbf58feee/config/xkb/baremak) for the layout.
 
 ```text
 base
