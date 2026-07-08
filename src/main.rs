@@ -53,11 +53,7 @@ fn printable_key(key: &str) -> Option<char> {
 }
 
 fn char_text(ch: char) -> String {
-    if ch == ' ' {
-        "\u{00a0}".to_string()
-    } else {
-        ch.to_string()
-    }
+    ch.to_string()
 }
 
 fn char_class(index: usize, cursor: usize, ch: char, wrong: bool) -> String {
@@ -99,7 +95,7 @@ fn scroll_current_into_view() {
 fn App() -> impl IntoView {
     let (layout_id, set_layout_id) = create_signal(LayoutId::Baremak);
     let (cursor, set_cursor) = create_signal(0usize);
-    let (mistakes, set_mistakes) = create_signal(0usize);
+    let (_mistakes, set_mistakes) = create_signal(0usize);
     let (last_wrong, set_last_wrong) = create_signal(None::<char>);
 
     create_effect(move |_| {
@@ -112,15 +108,6 @@ fn App() -> impl IntoView {
     create_effect(move |_| {
         cursor.get();
         scroll_current_into_view();
-    });
-
-    let accuracy = create_memo(move |_| {
-        let correct = cursor.get();
-        let total = correct + mistakes.get();
-        correct
-            .saturating_mul(100)
-            .checked_div(total)
-            .unwrap_or(100)
     });
 
     let on_keydown = move |event: web_sys::KeyboardEvent| {
@@ -163,11 +150,6 @@ fn App() -> impl IntoView {
                             </button>
                         }
                     }).collect_view()}
-                </div>
-                <div class="stats">
-                    <span>{move || cursor.get()}</span>
-                    <span>{move || format!("{}%", accuracy.get())}</span>
-                    <span>{move || mistakes.get()}</span>
                 </div>
             </nav>
 

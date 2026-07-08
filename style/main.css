@@ -50,7 +50,9 @@ button.selected {
 }
 
 .shell {
-  width: min(88rem, calc(100vw - clamp(1.25rem, 6vw, 6rem)));
+  display: grid;
+  grid-template-rows: auto 1fr;
+  width: min(96rem, calc(100vw - clamp(1.25rem, 5vw, 5rem)));
   min-height: 100vh;
   margin: 0 auto;
   padding: clamp(1.5rem, 5vh, 4rem) 0;
@@ -59,39 +61,47 @@ button.selected {
 
 .topline {
   display: flex;
-  justify-content: space-between;
-  gap: 2rem;
+  justify-content: center;
   color: var(--muted);
-  font-size: clamp(0.95rem, 1.2vw, 1.15rem);
+  font-family: "Berkeley Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: clamp(0.8rem, 1vw, 0.95rem);
   font-style: normal;
 }
 
-.layouts,
-.stats {
+.layouts {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.stats {
-  justify-content: flex-end;
+  gap: 1.25rem;
+  justify-content: center;
 }
 
 .type-window {
-  height: min(68vh, 48rem);
-  margin: clamp(3rem, 8vh, 6rem) 0 0;
+  align-self: center;
+  height: min(62vh, 42rem);
+  margin: 0;
   overflow: hidden;
+  scroll-behavior: auto;
 }
 
 .word-stream {
+  max-width: min(70rem, 100%);
+  margin: 0 auto;
   color: var(--quiet);
-  font-size: clamp(3.75rem, 8.8vw, 8.75rem);
-  letter-spacing: -0.06em;
-  line-height: 1.08;
+  font-size: clamp(2.75rem, 5.6vw, 5.6rem);
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+  overflow-wrap: normal;
+  padding: min(26vh, 17rem) 0;
+  text-align: center;
+  white-space: normal;
+  word-break: normal;
+  word-spacing: 0.18em;
 }
 
 .char {
-  display: inline;
+  display: inline-block;
+  position: relative;
+  vertical-align: baseline;
 }
 
 .char.typed {
@@ -103,21 +113,29 @@ button.selected {
 }
 
 .char.current {
-  background: rgba(122, 162, 247, 0.22);
   color: var(--text);
 }
 
+.char.current::before {
+  position: absolute;
+  top: 0.17em;
+  bottom: 0.17em;
+  left: -0.09em;
+  width: 0.035em;
+  background: var(--text);
+  content: "";
+}
+
 .char.current.wrong {
-  background: rgba(255, 107, 107, 0.22);
   color: var(--red);
 }
 
-.char.space.current {
-  background: rgba(122, 162, 247, 0.28);
+.char.current.wrong::before,
+.type-window.blocked .char.current::before {
+  background: var(--red);
 }
 
 .type-window.blocked .char.current {
-  background: rgba(255, 107, 107, 0.24);
   color: var(--red);
 }
 
@@ -132,16 +150,17 @@ button.selected {
     display: grid;
   }
 
-  .stats {
-    justify-content: flex-start;
-  }
-
   .type-window {
-    height: 70vh;
-    margin: 3rem 0 0;
+    height: 66vh;
+    margin: 2.5rem 0 0;
   }
 
   .word-stream {
-    font-size: clamp(3.2rem, 16vw, 5.25rem);
+    max-width: 100%;
+    font-size: clamp(2.5rem, 10.5vw, 4.1rem);
+    letter-spacing: 0.035em;
+    line-height: 1.48;
+    padding: 30vh 0;
+    word-spacing: 0.12em;
   }
 }
