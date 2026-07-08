@@ -139,6 +139,7 @@ button.selected {
 
 .char.current.wrong,
 .type-window.blocked .char.current {
+  color: var(--red);
   background-image: linear-gradient(var(--red), var(--red));
 }
 
