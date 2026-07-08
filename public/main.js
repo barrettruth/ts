@@ -512,13 +512,13 @@ function revealCurrent() {
 
   const windowRect = typeWindow.getBoundingClientRect();
   const currentRect = current.getBoundingClientRect();
-  const topEdge = windowRect.top + windowRect.height * 0.12;
-  const bottomEdge = windowRect.top + windowRect.height * 0.42;
+  const topEdge = windowRect.top + windowRect.height * 0.34;
+  const bottomEdge = windowRect.top + windowRect.height * 0.66;
 
   if (currentRect.top < topEdge || currentRect.bottom > bottomEdge) {
     current.scrollIntoView({
       behavior: "smooth",
-      block: "start",
+      block: "center",
       inline: "nearest",
     });
   }
@@ -532,8 +532,9 @@ function positionCursor() {
 
   const style = getComputedStyle(wordStream);
   const lineHeight = Number.parseFloat(style.lineHeight);
-  const x = current.offsetLeft;
-  const y = current.offsetTop + lineHeight * 0.78;
+  const anchor = current.classList.contains("space") ? current.previousElementSibling : null;
+  const x = anchor === null ? current.offsetLeft : anchor.offsetLeft + anchor.offsetWidth;
+  const y = (anchor === null ? current.offsetTop : anchor.offsetTop) + lineHeight * 0.78;
   cursorElement.style.transform = `translate(${x}px, ${y}px)`;
 }
 

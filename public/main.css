@@ -60,14 +60,11 @@ button.selected {
 }
 
 .shell {
-  --sidebar-width: 9rem;
-  --stage-gap: clamp(2rem, 5vw, 7rem);
+  --content-width: 82rem;
+  --rail-min: 9rem;
   display: grid;
   grid-template-rows: auto 1fr;
-  width: min(
-    calc(var(--sidebar-width) + var(--stage-gap) + 70rem),
-    calc(100vw - clamp(1.25rem, 5vw, 5rem))
-  );
+  width: calc(100vw - 2rem);
   min-height: 100vh;
   margin: 0 auto;
   padding: clamp(1.5rem, 5vh, 4rem) 0;
@@ -75,10 +72,11 @@ button.selected {
 }
 
 .topline {
-  display: flex;
-  justify-content: space-between;
-  gap: 2rem;
-  margin-left: calc(var(--sidebar-width) + var(--stage-gap));
+  display: grid;
+  grid-template-columns: minmax(var(--rail-min), 1fr) minmax(0, var(--content-width)) minmax(
+      var(--rail-min),
+      1fr
+    );
   color: var(--muted);
   font-family:
     "Berkeley Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
@@ -89,6 +87,8 @@ button.selected {
 .layouts {
   display: flex;
   flex-wrap: wrap;
+  grid-column: 2;
+  grid-row: 1;
   gap: 1.25rem;
   justify-content: flex-start;
 }
@@ -115,6 +115,9 @@ button.selected {
 }
 
 .stats {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
   color: var(--muted);
   text-align: right;
   white-space: nowrap;
@@ -122,33 +125,39 @@ button.selected {
 
 .stage {
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 70rem);
-  column-gap: var(--stage-gap);
+  grid-template-columns: minmax(var(--rail-min), 1fr) minmax(0, var(--content-width)) minmax(
+      var(--rail-min),
+      1fr
+    );
   align-items: center;
   width: 100%;
   min-height: 0;
 }
 
 .sidebar {
-  align-self: start;
-  justify-self: start;
-  margin-top: clamp(4rem, 12vh, 9rem);
+  grid-column: 1;
+  align-self: center;
+  justify-self: center;
   font-family:
     "Berkeley Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
   font-size: clamp(0.8rem, 1vw, 0.95rem);
 }
 
 .rail {
-  display: none;
+  display: block;
+  grid-column: 3;
 }
 
 .type-window {
+  grid-column: 2;
   align-self: center;
-  height: min(70vh, 48rem);
-  margin: 0;
+  height: calc(1.45em * 8);
   overflow: hidden;
   scroll-behavior: smooth;
-  transform: translateY(-3vh);
+  font-family:
+    "Berkeley Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
+  font-size: clamp(1.55rem, 3.15vw, 3.15rem);
+  line-height: 1.45;
 }
 
 .word-stream {
@@ -156,12 +165,8 @@ button.selected {
   max-width: 100%;
   margin: 0;
   color: var(--quiet);
-  font-family:
-    "Berkeley Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
-  font-size: clamp(2.05rem, 4.2vw, 4.2rem);
-  line-height: 1.45;
   overflow-wrap: normal;
-  padding: min(10vh, 6rem) 0 min(32vh, 20rem);
+  padding: 0 0 calc(1.45em * 4);
   text-align: left;
   white-space: normal;
   word-break: normal;
@@ -173,11 +178,6 @@ button.selected {
 
 .char.space {
   display: inline;
-}
-
-.char.current.space {
-  display: inline-block;
-  width: 1ch;
 }
 
 .char.typed {
@@ -219,21 +219,29 @@ button.selected {
 
 @media (max-width: 1040px) {
   .shell {
-    width: min(70rem, calc(100vw - clamp(1.25rem, 5vw, 5rem)));
+    width: min(var(--content-width), calc(100vw - 2rem));
   }
 
   .topline {
-    margin-left: 0;
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
   }
 
   .stage {
-    grid-template-columns: minmax(0, 70rem);
+    grid-template-columns: minmax(0, var(--content-width));
+    align-content: center;
     justify-content: stretch;
+    row-gap: 2rem;
+  }
+
+  .sidebar,
+  .type-window {
+    grid-column: 1;
   }
 
   .sidebar {
     justify-self: start;
-    margin: 2rem 0 0;
   }
 
   .levels {
@@ -241,9 +249,8 @@ button.selected {
     column-gap: 1.5rem;
   }
 
-  .type-window {
-    height: min(64vh, 42rem);
-    transform: translateY(0);
+  .rail {
+    display: none;
   }
 }
 
@@ -259,14 +266,12 @@ button.selected {
   }
 
   .type-window {
-    height: 66vh;
-    margin: 2.5rem 0 0;
+    height: calc(1.48em * 7);
+    font-size: clamp(1.45rem, 6vw, 2.35rem);
+    line-height: 1.48;
   }
 
   .word-stream {
     max-width: 100%;
-    font-size: clamp(1.9rem, 8vw, 3.1rem);
-    line-height: 1.48;
-    padding: 12vh 0 30vh;
   }
 }
