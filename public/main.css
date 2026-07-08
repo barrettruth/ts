@@ -48,12 +48,6 @@ button.selected {
   color: var(--text);
 }
 
-button:focus-visible,
-.shell:focus-visible {
-  outline: 1px solid var(--muted);
-  outline-offset: 0.35rem;
-}
-
 .shell {
   display: grid;
   grid-template-rows: auto 1fr;
