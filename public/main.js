@@ -1,51 +1,67 @@
 const levelStorageKey = "type.activeLevel";
 
-const levels = [
-  {
-    id: "1",
-    name: "1",
-    words: ["truth", "stone", "train", "notes", "calm", "hands", "clear", "steady"],
-  },
-  {
-    id: "2",
-    name: "2",
-    words: ["practice", "layout", "baremak", "colemak", "dvorak", "qwerty", "focus", "signal"],
-  },
-  {
-    id: "3",
-    name: "3",
-    words: ["rhythm", "cursor", "letter", "quiet", "exact", "typing", "speed", "memory"],
-  },
-  {
-    id: "4",
-    name: "4",
-    words: [
-      "repeat",
-      "system",
-      "syntax",
-      "buffer",
-      "window",
-      "branch",
-      "commit",
-      "vector",
-      "string",
-      "result",
-      "module",
-      "match",
-      "async",
-      "struct",
-      "public",
-      "private",
-      "render",
-      "scroll",
-      "target",
-      "symbol",
-      "layer",
-      "right",
-      "index",
-    ],
-  },
+const levelWords = [
+  "truth",
+  "stone",
+  "train",
+  "notes",
+  "calm",
+  "hands",
+  "clear",
+  "steady",
+  "practice",
+  "layout",
+  "baremak",
+  "colemak",
+  "dvorak",
+  "qwerty",
+  "focus",
+  "signal",
+  "rhythm",
+  "cursor",
+  "letter",
+  "quiet",
+  "exact",
+  "typing",
+  "speed",
+  "memory",
+  "repeat",
+  "system",
+  "syntax",
+  "buffer",
+  "window",
+  "branch",
+  "commit",
+  "vector",
+  "string",
+  "result",
+  "module",
+  "match",
+  "async",
+  "struct",
+  "public",
+  "private",
+  "render",
+  "scroll",
+  "target",
+  "symbol",
+  "layer",
+  "right",
+  "index",
 ];
+
+const levels = [
+  ["01", "home"],
+  ["02", "top"],
+  ["03", "bottom"],
+  ["04", "short"],
+  ["05", "bigrams"],
+  ["06", "trigrams"],
+  ["07", "punct"],
+  ["08", "symbols"],
+  ["09", "prose"],
+  ["10", "code"],
+].map(([id, name]) => ({ id, name, words: levelWords }));
 
 const layouts = [
   ["qwerty", "QWERTY"],
@@ -169,15 +185,30 @@ function formatElapsed() {
   return `${minutes}m${seconds}s`;
 }
 
-function buttonFor({ active, label, onClick }) {
+function buttonFor({ active, className, label, onClick }) {
   const button = document.createElement("button");
   button.type = "button";
   button.textContent = label;
+  button.className = className ?? "";
   button.classList.toggle("selected", active);
   if (active) {
     button.setAttribute("aria-current", "true");
   }
   button.addEventListener("click", onClick);
+  return button;
+}
+
+function levelButtonFor({ active, id, name, onClick }) {
+  const button = buttonFor({ active, className: "level", label: "", onClick });
+  const number = document.createElement("span");
+  const label = document.createElement("span");
+
+  number.className = "level-number";
+  number.textContent = id;
+  label.className = "level-name";
+  label.textContent = name;
+  button.replaceChildren(number, label);
+
   return button;
 }
 
@@ -200,9 +231,10 @@ function renderLayouts() {
 function renderLevels() {
   levelList.replaceChildren(
     ...levels.map((level) =>
-      buttonFor({
+      levelButtonFor({
         active: levelId === level.id,
-        label: level.name,
+        id: level.id,
+        name: level.name,
         onClick: () => {
           levelId = level.id;
           localStorage.setItem(levelStorageKey, levelId);

@@ -77,8 +77,7 @@ button.selected {
   justify-items: start;
 }
 
-.layouts,
-.levels {
+.layouts {
   display: flex;
   flex-wrap: wrap;
   gap: 1.25rem;
@@ -86,7 +85,24 @@ button.selected {
 }
 
 .levels {
-  gap: 0.85rem;
+  display: grid;
+  gap: 0.25rem;
+  justify-content: start;
+}
+
+.level {
+  display: grid;
+  grid-template-columns: 2ch minmax(4.5rem, 1fr);
+  column-gap: 1.6rem;
+  width: 9rem;
+}
+
+.level-number {
+  text-align: left;
+}
+
+.level-name {
+  text-align: right;
 }
 
 .stats {
