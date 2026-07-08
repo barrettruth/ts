@@ -1,20 +1,21 @@
 default:
     @just --list
 
-run:
-    trunk serve
+run: build
+    python3 -m http.server 8080 --bind 127.0.0.1 --directory dist
 
 format:
-    cargo fmt --all -- --check
+    biome format public/main.js public/main.css biome.json
 
 check:
-    cargo check --target wasm32-unknown-unknown
+    biome check public/main.js public/main.css biome.json
 
 lint:
-    cargo clippy --target wasm32-unknown-unknown -- -D warnings
+    biome lint public/main.js public/main.css biome.json
 
 build:
-    trunk build --release
+    install -d dist
+    rsync -a --delete public/ dist/
 
 ci: format check lint build
     @:
