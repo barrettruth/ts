@@ -16,7 +16,6 @@ struct KeyDef {
 pub struct LayoutDef {
     pub id: LayoutId,
     pub name: &'static str,
-    pub subtitle: &'static str,
     rows: &'static [&'static [KeyDef]],
 }
 
@@ -190,25 +189,21 @@ pub const LAYOUTS: &[LayoutDef] = &[
     LayoutDef {
         id: LayoutId::Qwerty,
         name: "QWERTY",
-        subtitle: "baseline physical layout",
         rows: QWERTY_ROWS,
     },
     LayoutDef {
         id: LayoutId::Dvorak,
         name: "Dvorak",
-        subtitle: "alternate prose layout",
         rows: DVORAK_ROWS,
     },
     LayoutDef {
         id: LayoutId::ColemakDh,
         name: "Colemak-DH",
-        subtitle: "standard Colemak-DH letters",
         rows: COLEMAK_DH_ROWS,
     },
     LayoutDef {
         id: LayoutId::Baremak,
         name: "Baremak",
-        subtitle: "Colemak-DH plus Right Alt symbols",
         rows: BAREMAK_ROWS,
     },
 ];
@@ -248,15 +243,9 @@ pub fn KeyboardPane(
     alt_preview: ReadSignal<bool>,
 ) -> impl IntoView {
     view! {
-        <section class="panel keyboard-panel">
-            <div class="trainer-head">
-                <div>
-                    <p class="label">"visual map"</p>
-                    <p class="hint">{move || if layout_id.get() == LayoutId::Baremak { "hold Right Alt to preview symbols" } else { "base layer" }}</p>
-                </div>
-                <div class=move || if alt_preview.get() { "layer-chip active" } else { "layer-chip" }>
-                    "Right Alt"
-                </div>
+        <section class="keyboard-panel">
+            <div class=move || if alt_preview.get() { "alt-layer active" } else { "alt-layer" }>
+                "alt"
             </div>
             <div class="keyboard">
                 {move || {

@@ -4,14 +4,17 @@ default:
 run:
     trunk serve
 
-build:
-    trunk build --release
-
 format:
     cargo fmt --all -- --check
+
+check:
+    cargo check --target wasm32-unknown-unknown
 
 lint:
     cargo clippy --target wasm32-unknown-unknown -- -D warnings
 
-ci: format lint build
+build:
+    trunk build --release
+
+ci: format check lint build
     @:
