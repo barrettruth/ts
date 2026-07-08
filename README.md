@@ -2,6 +2,11 @@
 
 Minimal typing trainer for QWERTY, Dvorak, Colemak-DH, and "Baremak".
 
+> [!NOTE]
+> Due to GitHub's historic unreliability, active development is hosted on
+> [Forgejo](https://forge.barrettruth.com/barrettruth/type).
+> GitHub is maintained as a read-only mirror.
+
 "Baremak" keeps Colemak-DH letters and adds my custom symbol layer.
 
 ```text
