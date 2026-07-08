@@ -37,6 +37,8 @@ const layoutRows = {
 };
 
 const shortWords = [
+  "a",
+  "i",
   "as",
   "at",
   "in",
@@ -52,6 +54,9 @@ const shortWords = [
   "map",
   "row",
   "key",
+  "code",
+  "type",
+  "word",
 ];
 const proseWords = [
   "truth",
@@ -65,30 +70,33 @@ const proseWords = [
   "focus",
   "signal",
 ];
+const capsWords = proseWords.map(capitalize);
+const numberWords = ["line 42", "port 8080", "5 keys", "12 rows", "80 wpm", "v2", "0.12", "2026"];
+const sentenceWords = [
+  "The hands return home.",
+  "Clear notes keep focus.",
+  "Steady practice builds rhythm.",
+];
 const codeWords = [
-  "const",
-  "let",
-  "return",
-  "async",
-  "await",
-  "string",
-  "match",
-  "module",
-  "render",
-  "target",
+  "const value = 1;",
+  "return result;",
+  "if (match) { render(); }",
+  "target[key] = value;",
 ];
 
 const levels = [
-  ["01", "home", () => rowDrill("home")],
-  ["02", "top", () => rowDrill("top")],
-  ["03", "bottom", () => rowDrill("bottom")],
+  ["01", "home", () => rowDrill(["home"])],
+  ["02", "top", () => rowDrill(["home", "top"])],
+  ["03", "bottom", () => rowDrill(["home", "top", "bottom"])],
   ["04", "short", () => shortWords],
-  ["05", "bigrams", () => ngrams(baseLetters(), 2)],
-  ["06", "trigrams", () => ngrams(baseLetters(), 3)],
-  ["07", "punct", punctuationDrill],
-  ["08", "symbols", symbolDrill],
-  ["09", "prose", () => proseWords],
-  ["10", "code", () => codeWords],
+  ["05", "ngrams", ngramDrill],
+  ["06", "prose", () => proseWords],
+  ["07", "caps", () => capsWords],
+  ["08", "punct", punctuationDrill],
+  ["09", "numbers", () => numberWords],
+  ["10", "symbols", symbolDrill],
+  ["11", "sentences", () => sentenceWords],
+  ["12", "code", () => codeWords],
 ].map(([id, name, words]) => ({ id, name, words }));
 
 const layouts = Object.entries(layoutRows).map(([id, layout]) => [id, layout.name]);
@@ -144,16 +152,30 @@ function charsForLayer(layer) {
   );
 }
 
-function rowChars(rowName) {
-  return activeLayout().rows[rowName].map((key) => key.base);
+function letter(char) {
+  return /^[a-z]$/.test(char);
+}
+
+function capitalize(word) {
+  return `${word[0].toUpperCase()}${word.slice(1)}`;
+}
+
+function rowLetters(rowName) {
+  return activeLayout()
+    .rows[rowName].map((key) => key.base)
+    .filter(letter);
+}
+
+function rowSet(rowNames) {
+  return unique(rowNames.flatMap(rowLetters));
 }
 
 function baseLetters() {
-  return charsForLayer("base").filter((char) => /^[a-z]$/.test(char));
+  return charsForLayer("base").filter(letter);
 }
 
 function basePunctuation() {
-  return charsForLayer("base").filter((char) => !/^[a-z]$/.test(char));
+  return charsForLayer("base").filter((char) => !letter(char));
 }
 
 function shiftPunctuation() {
@@ -188,19 +210,25 @@ function drillChars(chars) {
   return [...chunks(chars, 5), ...ngrams(chars, 2), chars.join("")].filter(Boolean);
 }
 
-function rowDrill(rowName) {
-  return drillChars(rowChars(rowName));
+function rowDrill(rowNames) {
+  return drillChars(rowSet(rowNames));
+}
+
+function ngramDrill() {
+  const letters = baseLetters();
+  return [...ngrams(letters, 2), ...ngrams(letters, 3)];
 }
 
 function punctuationDrill() {
-  return drillChars(unique([...basePunctuation(), ...shiftPunctuation()]));
+  const marks = unique([...basePunctuation(), ...shiftPunctuation()]);
+  return proseWords.map((word, index) => `${word}${marks[index % marks.length]}`);
 }
 
 function symbolDrill() {
   const symbols = unique(altgrSymbols());
-  return drillChars(
-    symbols.length > 0 ? symbols : unique([...basePunctuation(), ...shiftPunctuation()]),
-  );
+  const chars =
+    symbols.length > 0 ? symbols : unique([...basePunctuation(), ...shiftPunctuation()]);
+  return [...chunks(chars, 5), ...ngrams(chars, 2), ...ngrams(chars, 3)].filter(Boolean);
 }
 
 function activeWords() {
