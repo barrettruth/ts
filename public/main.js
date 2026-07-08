@@ -53,7 +53,7 @@ const codeWords = [
 const levels = [
   ["01", "home", () => rowDrill(["home"], 0.1)],
   ["02", "top", () => rowDrill(["home", "top"], 0.5)],
-  ["03", "bottom", () => rowDrill(["home", "top", "bottom"], 0.5)],
+  ["03", "bottom", () => rowDrill(["home", "bottom"], 0.5)],
   ["04", "short", shortDrill],
   ["05", "prose", proseDrill],
   ["06", "caps", capsDrill],
@@ -72,6 +72,8 @@ const levelList = document.getElementById("levels");
 const typeWindow = document.getElementById("type-window");
 const wordStream = document.getElementById("word-stream");
 const statsElement = document.getElementById("stats");
+const cursorElement = document.createElement("span");
+cursorElement.className = "typing-cursor";
 
 let layoutId = readLayoutId();
 let levelId = readLevelId();
@@ -510,16 +512,29 @@ function revealCurrent() {
 
   const windowRect = typeWindow.getBoundingClientRect();
   const currentRect = current.getBoundingClientRect();
-  const topEdge = windowRect.top + windowRect.height * 0.34;
-  const bottomEdge = windowRect.top + windowRect.height * 0.66;
+  const topEdge = windowRect.top + windowRect.height * 0.12;
+  const bottomEdge = windowRect.top + windowRect.height * 0.42;
 
   if (currentRect.top < topEdge || currentRect.bottom > bottomEdge) {
     current.scrollIntoView({
       behavior: "smooth",
-      block: "center",
+      block: "start",
       inline: "nearest",
     });
   }
+}
+
+function positionCursor() {
+  const current = document.getElementById("current-char");
+  if (current === null) {
+    return;
+  }
+
+  const style = getComputedStyle(wordStream);
+  const lineHeight = Number.parseFloat(style.lineHeight);
+  const x = current.offsetLeft;
+  const y = current.offsetTop + lineHeight * 0.78;
+  cursorElement.style.transform = `translate(${x}px, ${y}px)`;
 }
 
 function renderStream() {
@@ -536,8 +551,11 @@ function renderStream() {
   }
 
   typeWindow.classList.toggle("blocked", lastWrong !== null);
-  wordStream.replaceChildren(fragment);
-  requestAnimationFrame(revealCurrent);
+  wordStream.replaceChildren(fragment, cursorElement);
+  requestAnimationFrame(() => {
+    positionCursor();
+    revealCurrent();
+  });
 }
 
 function renderStats() {

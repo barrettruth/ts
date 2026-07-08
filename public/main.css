@@ -60,9 +60,14 @@ button.selected {
 }
 
 .shell {
+  --sidebar-width: 9rem;
+  --stage-gap: clamp(2rem, 5vw, 7rem);
   display: grid;
   grid-template-rows: auto 1fr;
-  width: min(96rem, calc(100vw - clamp(1.25rem, 5vw, 5rem)));
+  width: min(
+    calc(var(--sidebar-width) + var(--stage-gap) + 70rem),
+    calc(100vw - clamp(1.25rem, 5vw, 5rem))
+  );
   min-height: 100vh;
   margin: 0 auto;
   padding: clamp(1.5rem, 5vh, 4rem) 0;
@@ -73,8 +78,7 @@ button.selected {
   display: flex;
   justify-content: space-between;
   gap: 2rem;
-  width: min(70rem, 100%);
-  margin: 0 auto;
+  margin-left: calc(var(--sidebar-width) + var(--stage-gap));
   color: var(--muted);
   font-family:
     "Berkeley Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
@@ -118,16 +122,16 @@ button.selected {
 
 .stage {
   display: grid;
-  grid-template-columns: minmax(9rem, 1fr) minmax(0, 70rem) minmax(9rem, 1fr);
+  grid-template-columns: var(--sidebar-width) minmax(0, 70rem);
+  column-gap: var(--stage-gap);
   align-items: center;
-  width: 100vw;
+  width: 100%;
   min-height: 0;
-  margin-inline: calc(50% - 50vw);
 }
 
 .sidebar {
   align-self: start;
-  justify-self: center;
+  justify-self: start;
   margin-top: clamp(4rem, 12vh, 9rem);
   font-family:
     "Berkeley Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
@@ -135,33 +139,45 @@ button.selected {
 }
 
 .rail {
-  min-width: 0;
+  display: none;
 }
 
 .type-window {
   align-self: center;
-  height: min(62vh, 42rem);
+  height: min(70vh, 48rem);
   margin: 0;
   overflow: hidden;
   scroll-behavior: smooth;
-  transform: translateY(-8vh);
+  transform: translateY(-3vh);
 }
 
 .word-stream {
-  max-width: min(70rem, 100%);
-  margin: 0 auto;
+  position: relative;
+  max-width: 100%;
+  margin: 0;
   color: var(--quiet);
+  font-family:
+    "Berkeley Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, monospace;
   font-size: clamp(2.05rem, 4.2vw, 4.2rem);
   line-height: 1.45;
   overflow-wrap: normal;
-  padding: min(26vh, 17rem) 0;
+  padding: min(10vh, 6rem) 0 min(32vh, 20rem);
   text-align: left;
-  white-space: pre-wrap;
+  white-space: normal;
   word-break: normal;
 }
 
 .char {
   display: inline;
+}
+
+.char.space {
+  display: inline;
+}
+
+.char.current.space {
+  display: inline-block;
+  width: 1ch;
 }
 
 .char.typed {
@@ -176,16 +192,20 @@ button.selected {
   position: relative;
 }
 
-.char.current::after {
+.typing-cursor {
   position: absolute;
-  right: 0;
-  bottom: 0.12em;
+  top: 0;
   left: 0;
   z-index: 1;
+  width: 1ch;
   height: 0.055em;
-  background: var(--text);
+  background: var(--quiet);
   content: "";
   pointer-events: none;
+  transition:
+    transform 90ms ease-out,
+    width 90ms ease-out,
+    background-color 90ms ease-out;
 }
 
 .char.current.wrong,
@@ -193,9 +213,38 @@ button.selected {
   color: var(--red);
 }
 
-.char.current.wrong::after,
-.type-window.blocked .char.current::after {
+.type-window.blocked .typing-cursor {
   background: var(--red);
+}
+
+@media (max-width: 1040px) {
+  .shell {
+    width: min(70rem, calc(100vw - clamp(1.25rem, 5vw, 5rem)));
+  }
+
+  .topline {
+    margin-left: 0;
+  }
+
+  .stage {
+    grid-template-columns: minmax(0, 70rem);
+    justify-content: stretch;
+  }
+
+  .sidebar {
+    justify-self: start;
+    margin: 2rem 0 0;
+  }
+
+  .levels {
+    grid-template-columns: repeat(3, max-content);
+    column-gap: 1.5rem;
+  }
+
+  .type-window {
+    height: min(64vh, 42rem);
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 760px) {
@@ -218,6 +267,6 @@ button.selected {
     max-width: 100%;
     font-size: clamp(1.9rem, 8vw, 3.1rem);
     line-height: 1.48;
-    padding: 30vh 0;
+    padding: 12vh 0 30vh;
   }
 }
