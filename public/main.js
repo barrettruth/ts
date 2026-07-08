@@ -560,7 +560,7 @@ function renderStream() {
 }
 
 function renderStats() {
-  statsElement.textContent = `${calculateWpm()} wpm / ${calculateAccuracy()} % / ${formatElapsed()}`;
+  statsElement.textContent = `${calculateWpm()} wpm / ${calculateAccuracy()}% / ${formatElapsed()}`;
 }
 
 function render() {
