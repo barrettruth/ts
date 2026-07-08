@@ -2,6 +2,7 @@ mod keyboard;
 
 use keyboard::{LayoutId, LAYOUTS};
 use leptos::*;
+use wasm_bindgen::{closure::Closure, JsCast};
 
 const WORDS: &[&str] = &[
     "truth", "stone", "train", "notes", "calm", "hands", "clear", "steady", "practice", "layout",
@@ -78,6 +79,13 @@ fn char_class(index: usize, cursor: usize, ch: char, wrong: bool) -> String {
     class
 }
 
+fn browser_now() -> f64 {
+    web_sys::window()
+        .and_then(|window| window.performance())
+        .map(|performance| performance.now())
+        .unwrap_or(0.0)
+}
+
 fn scroll_current_into_view() {
     let Some(window) = web_sys::window() else {
         return;
@@ -102,17 +110,48 @@ fn App() -> impl IntoView {
     let (cursor, set_cursor) = create_signal(0usize);
     let (_mistakes, set_mistakes) = create_signal(0usize);
     let (last_wrong, set_last_wrong) = create_signal(None::<char>);
+    let (started_at, set_started_at) = create_signal(None::<f64>);
+    let (now, set_now) = create_signal(browser_now());
 
     create_effect(move |_| {
         layout_id.get();
         set_cursor.set(0);
         set_mistakes.set(0);
         set_last_wrong.set(None);
+        set_started_at.set(None);
     });
 
     create_effect(move |_| {
         cursor.get();
         scroll_current_into_view();
+    });
+
+    let interval = web_sys::window().and_then(|window| {
+        let callback = Closure::wrap(Box::new(move || set_now.set(browser_now())) as Box<dyn FnMut()>);
+        let handle = window
+            .set_interval_with_callback_and_timeout_and_arguments_0(
+                callback.as_ref().unchecked_ref(),
+                500,
+            )
+            .ok()?;
+        Some((window, handle, callback))
+    });
+    on_cleanup(move || {
+        if let Some((window, handle, _callback)) = interval {
+            window.clear_interval_with_handle(handle);
+        }
+    });
+
+    let wpm = create_memo(move |_| {
+        let Some(started_at) = started_at.get() else {
+            return 0;
+        };
+        let elapsed_minutes = (now.get() - started_at) / 60_000.0;
+        if elapsed_minutes <= 0.0 {
+            0
+        } else {
+            ((cursor.get() as f64 / 5.0) / elapsed_minutes).round() as usize
+        }
     });
 
     let on_keydown = move |event: web_sys::KeyboardEvent| {
@@ -139,6 +178,11 @@ fn App() -> impl IntoView {
         event.prevent_default();
 
         if typed == expected {
+            if started_at.get_untracked().is_none() {
+                let time = browser_now();
+                set_started_at.set(Some(time));
+                set_now.set(time);
+            }
             set_cursor.set(index + 1);
             set_last_wrong.set(None);
         } else {
@@ -160,6 +204,7 @@ fn App() -> impl IntoView {
                         }
                     }).collect_view()}
                 </div>
+                <div class="wpm">{move || wpm.get()}</div>
             </nav>
 
             <section class=move || if last_wrong.get().is_some() { "type-window blocked" } else { "type-window" }>
