@@ -14,17 +14,20 @@ trap 'rm -rf "$tmp"' EXIT HUP INT TERM
 curl -fsSL "$words_url" |
   tr ' ' '\n' |
   tr '[:upper:]' '[:lower:]' |
-  awk '/^[a-z]+$/ { if (!seen[$0]++) print $0 }' > "$tmp/words"
+  awk '/^[a-z]+$/ { if (!seen[$0]++) print $0 }' >"$tmp/words"
 
 curl -fsSL "$abbrev_url" |
   tr ' ' '\n' |
-  awk '/^[A-Z][A-Z][A-Z][A-Z]?[A-Z]?[A-Z]?$/ { if (!seen[$0]++) print $0 }' > "$tmp/acronyms"
+  awk '/^[A-Z][A-Z][A-Z][A-Z]?[A-Z]?[A-Z]?$/ { if (!seen[$0]++) print $0 }' >"$tmp/acronyms"
 
-: > "$tmp/books"
+: >"$tmp/books"
 for url in $gutenberg_urls; do
-  curl -fsSL "$url" >> "$tmp/books"
-  printf '\n' >> "$tmp/books"
+  curl -fsSL "$url" >>"$tmp/books"
+  printf '\n' >>"$tmp/books"
 done
+
+double_quotes=$(printf '\342\200\234\342\200\235')
+single_quotes=$(printf '\342\200\230\342\200\231')
 
 awk '
   BEGIN { active = 0 }
@@ -33,8 +36,8 @@ awk '
   active { print }
 ' "$tmp/books" |
   tr '\r' '\n' |
-  awk '
-    { gsub(/[“”]/, "\""); gsub(/[‘’]/, "\047"); gsub(/--+/, " "); gsub(/[_*]/, " "); print }
+  awk -v double_quotes="$double_quotes" -v single_quotes="$single_quotes" '
+    { gsub("[" double_quotes "]", "\""); gsub("[" single_quotes "]", "\047"); gsub(/--+/, " "); gsub(/[_*]/, " "); print }
   ' |
   awk '
     BEGIN { RS = "[.!?]" }
@@ -49,7 +52,7 @@ awk '
     }
   ' |
   awk '!seen[$0]++ { print }' |
-  sed 300q > "$tmp/sentences"
+  sed 300q >"$tmp/sentences"
 
 json_array() {
   awk '
@@ -73,4 +76,4 @@ json_array() {
   printf ';\n\nexport const sentences = '
   json_array "$tmp/sentences"
   printf ';\n'
-} > "$out_dir/corpus.js"
+} >"$out_dir/corpus.js"

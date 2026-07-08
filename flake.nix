@@ -29,6 +29,8 @@
         pkgs.openssh
         pkgs.python3
         pkgs.rsync
+        pkgs.shellcheck
+        pkgs.shfmt
       ];
     in
     {
