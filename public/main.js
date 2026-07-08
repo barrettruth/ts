@@ -1,6 +1,59 @@
+const layoutStorageKey = "type.activeLayout";
 const levelStorageKey = "type.activeLevel";
 
-const levelWords = [
+const layoutRows = {
+  qwerty: {
+    name: "QWERTY",
+    rows: {
+      top: row("qwertyuiop"),
+      home: row("asdfghjkl;'", 'ASDFGHJKL:"'),
+      bottom: row("zxcvbnm,./", "ZXCVBNM<>?"),
+    },
+  },
+  dvorak: {
+    name: "Dvorak",
+    rows: {
+      top: row("',.pyfgcrl", '"<>PYFGCRL'),
+      home: row("aoeuidhtns-", "AOEUIDHTNS_"),
+      bottom: row(";qjkxbmwvz", ":QJKXBMWVZ"),
+    },
+  },
+  "colemak-dh": {
+    name: "Colemak-DH",
+    rows: {
+      top: row("qwfpbjluy;", "QWFPBJLUY:"),
+      home: row("arstgmneio'", 'ARSTGMNEIO"'),
+      bottom: row("zxcdvkh,./", "ZXCDVKH<>?"),
+    },
+  },
+  baremak: {
+    name: "Baremak",
+    rows: {
+      top: row("qwfpbjluy;", "QWFPBJLUY:", "!@#</\\>&$|"),
+      home: row("arstgmneio'", 'ARSTGMNEIO"', "[{=(+-)~}]`"),
+      bottom: row("zxcdvkh,./", "ZXCDVKH<>?", "%^*_?:;'\""),
+    },
+  },
+};
+
+const shortWords = [
+  "as",
+  "at",
+  "in",
+  "it",
+  "no",
+  "on",
+  "or",
+  "to",
+  "we",
+  "if",
+  "run",
+  "set",
+  "map",
+  "row",
+  "key",
+];
+const proseWords = [
   "truth",
   "stone",
   "train",
@@ -9,66 +62,36 @@ const levelWords = [
   "hands",
   "clear",
   "steady",
-  "practice",
-  "layout",
-  "baremak",
-  "colemak",
-  "dvorak",
-  "qwerty",
   "focus",
   "signal",
-  "rhythm",
-  "cursor",
-  "letter",
-  "quiet",
-  "exact",
-  "typing",
-  "speed",
-  "memory",
-  "repeat",
-  "system",
-  "syntax",
-  "buffer",
-  "window",
-  "branch",
-  "commit",
-  "vector",
-  "string",
-  "result",
-  "module",
-  "match",
+];
+const codeWords = [
+  "const",
+  "let",
+  "return",
   "async",
-  "struct",
-  "public",
-  "private",
+  "await",
+  "string",
+  "match",
+  "module",
   "render",
-  "scroll",
   "target",
-  "symbol",
-  "layer",
-  "right",
-  "index",
 ];
 
 const levels = [
-  ["01", "home"],
-  ["02", "top"],
-  ["03", "bottom"],
-  ["04", "short"],
-  ["05", "bigrams"],
-  ["06", "trigrams"],
-  ["07", "punct"],
-  ["08", "symbols"],
-  ["09", "prose"],
-  ["10", "code"],
-].map(([id, name]) => ({ id, name, words: levelWords }));
+  ["01", "home", () => rowDrill("home")],
+  ["02", "top", () => rowDrill("top")],
+  ["03", "bottom", () => rowDrill("bottom")],
+  ["04", "short", () => shortWords],
+  ["05", "bigrams", () => ngrams(baseLetters(), 2)],
+  ["06", "trigrams", () => ngrams(baseLetters(), 3)],
+  ["07", "punct", punctuationDrill],
+  ["08", "symbols", symbolDrill],
+  ["09", "prose", () => proseWords],
+  ["10", "code", () => codeWords],
+].map(([id, name, words]) => ({ id, name, words }));
 
-const layouts = [
-  ["qwerty", "QWERTY"],
-  ["dvorak", "Dvorak"],
-  ["colemak-dh", "Colemak-DH"],
-  ["baremak", "Baremak"],
-];
+const layouts = Object.entries(layoutRows).map(([id, layout]) => [id, layout.name]);
 
 const app = document.getElementById("app");
 const layoutList = document.getElementById("layouts");
@@ -77,7 +100,7 @@ const typeWindow = document.getElementById("type-window");
 const wordStream = document.getElementById("word-stream");
 const statsElement = document.getElementById("stats");
 
-let layoutId = "baremak";
+let layoutId = readLayoutId();
 let levelId = readLevelId();
 let cursor = 0;
 let errors = 0;
@@ -85,14 +108,103 @@ let lastWrong = null;
 let startedAt = null;
 let now = performance.now();
 
+function row(base, shift = base.toUpperCase(), altgr = "") {
+  const shifts = Array.from(shift);
+  const altgrs = Array.from(altgr);
+  return Array.from(base, (char, index) => ({
+    altgr: altgrs[index] ?? null,
+    base: char,
+    shift: shifts[index] ?? char,
+  }));
+}
+
+function activeLayout() {
+  return layoutRows[layoutId] ?? layoutRows.baremak;
+}
+
+function activeLevel() {
+  return levels.find((level) => level.id === levelId) ?? levels[0];
+}
+
+function readLayoutId() {
+  const fallback = "baremak";
+  const stored = localStorage.getItem(layoutStorageKey);
+  return layouts.some(([id]) => id === stored) ? stored : fallback;
+}
+
 function readLevelId() {
   const fallback = levels[0].id;
   const stored = localStorage.getItem(levelStorageKey);
   return levels.some((level) => level.id === stored) ? stored : fallback;
 }
 
+function charsForLayer(layer) {
+  return Object.values(activeLayout().rows).flatMap((keys) =>
+    keys.map((key) => key[layer]).filter(Boolean),
+  );
+}
+
+function rowChars(rowName) {
+  return activeLayout().rows[rowName].map((key) => key.base);
+}
+
+function baseLetters() {
+  return charsForLayer("base").filter((char) => /^[a-z]$/.test(char));
+}
+
+function basePunctuation() {
+  return charsForLayer("base").filter((char) => !/^[a-z]$/.test(char));
+}
+
+function shiftPunctuation() {
+  return charsForLayer("shift").filter((char) => !/^[A-Z]$/.test(char));
+}
+
+function altgrSymbols() {
+  return charsForLayer("altgr");
+}
+
+function unique(chars) {
+  return [...new Set(chars)];
+}
+
+function chunks(chars, size) {
+  const words = [];
+  for (let index = 0; index < chars.length; index += size) {
+    words.push(chars.slice(index, index + size).join(""));
+  }
+  return words;
+}
+
+function ngrams(chars, size) {
+  const words = [];
+  for (let index = 0; index <= chars.length - size; index += 1) {
+    words.push(chars.slice(index, index + size).join(""));
+  }
+  return words;
+}
+
+function drillChars(chars) {
+  return [...chunks(chars, 5), ...ngrams(chars, 2), chars.join("")].filter(Boolean);
+}
+
+function rowDrill(rowName) {
+  return drillChars(rowChars(rowName));
+}
+
+function punctuationDrill() {
+  return drillChars(unique([...basePunctuation(), ...shiftPunctuation()]));
+}
+
+function symbolDrill() {
+  const symbols = unique(altgrSymbols());
+  return drillChars(
+    symbols.length > 0 ? symbols : unique([...basePunctuation(), ...shiftPunctuation()]),
+  );
+}
+
 function activeWords() {
-  return levels.find((level) => level.id === levelId)?.words ?? levels[0].words;
+  return activeLevel().words();
 }
 
 function streamTextUntil(minLength) {
@@ -220,6 +332,7 @@ function renderLayouts() {
         label: name,
         onClick: () => {
           layoutId = id;
+          localStorage.setItem(layoutStorageKey, layoutId);
           reset();
           requestAnimationFrame(() => app.focus());
         },
@@ -305,7 +418,7 @@ function reset() {
 }
 
 function handleKeydown(event) {
-  if (event.ctrlKey || event.metaKey || event.altKey) {
+  if (event.metaKey || ((event.ctrlKey || event.altKey) && !event.getModifierState("AltGraph"))) {
     return;
   }
 
