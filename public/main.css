@@ -131,16 +131,29 @@ button.selected {
 }
 
 .char.current {
-  background-image: linear-gradient(var(--text), var(--text));
-  background-position: 0 88%;
-  background-repeat: no-repeat;
-  background-size: 100% 0.055em;
+  position: relative;
+}
+
+.char.current::after {
+  position: absolute;
+  right: 0;
+  bottom: 0.12em;
+  left: 0;
+  z-index: 1;
+  height: 0.055em;
+  background: var(--text);
+  content: "";
+  pointer-events: none;
 }
 
 .char.current.wrong,
 .type-window.blocked .char.current {
   color: var(--red);
-  background-image: linear-gradient(var(--red), var(--red));
+}
+
+.char.current.wrong::after,
+.type-window.blocked .char.current::after {
+  background: var(--red);
 }
 
 @media (max-width: 760px) {
