@@ -74,8 +74,7 @@ let layoutId = readLayoutId();
 let levelId = readLevelId();
 let currentWords = [];
 let cursor = 0;
-let errors = 0;
-let lastWrong = null;
+let wrongIndexes = new Set();
 let startedAt = null;
 let now = performance.now();
 
@@ -471,11 +470,11 @@ function charClass(index, char, syntaxClass) {
   }
   if (index < cursor) {
     classNames.push("typed");
-  } else if (index === cursor) {
-    classNames.push("current");
-    if (lastWrong !== null) {
+    if (wrongIndexes.has(index)) {
       classNames.push("wrong");
     }
+  } else if (index === cursor) {
+    classNames.push("current");
   } else {
     classNames.push("future");
   }
@@ -496,12 +495,11 @@ function calculateWpm() {
 }
 
 function calculateAccuracy() {
-  const total = cursor + errors;
-  if (total === 0) {
+  if (cursor === 0) {
     return 100;
   }
 
-  return Math.round((cursor / total) * 100);
+  return Math.round(((cursor - wrongIndexes.size) / cursor) * 100);
 }
 
 function formatElapsed() {
@@ -631,7 +629,6 @@ function renderStream() {
     fragment.append(span);
   }
 
-  practiceWindow.classList.toggle("blocked", lastWrong !== null);
   practiceWindow.classList.toggle("syntax-highlighting", isCodeLevel());
   wordStream.replaceChildren(fragment, cursorElement);
   requestAnimationFrame(() => {
@@ -652,8 +649,7 @@ function render() {
 function reset() {
   currentWords = activeLevel().words();
   cursor = 0;
-  errors = 0;
-  lastWrong = null;
+  wrongIndexes = new Set();
   startedAt = null;
   now = performance.now();
   renderLayouts();
@@ -668,8 +664,11 @@ function handleKeydown(event) {
 
   if (event.key === "Backspace") {
     event.preventDefault();
-    cursor = previousTypingCursor(cursor);
-    lastWrong = null;
+    const previous = previousTypingCursor(cursor);
+    for (let index = previous; index < cursor; index += 1) {
+      wrongIndexes.delete(index);
+    }
+    cursor = previous;
     render();
     return;
   }
@@ -686,17 +685,16 @@ function handleKeydown(event) {
 
   event.preventDefault();
 
-  if (typed === expected) {
-    if (startedAt === null) {
-      startedAt = performance.now();
-      now = startedAt;
-    }
-    cursor = nextTypingCursor(cursor);
-    lastWrong = null;
-  } else {
-    errors += 1;
-    lastWrong = typed;
+  if (startedAt === null) {
+    startedAt = performance.now();
+    now = startedAt;
   }
+  if (typed === expected) {
+    wrongIndexes.delete(cursor);
+  } else {
+    wrongIndexes.add(cursor);
+  }
+  cursor = nextTypingCursor(cursor);
 
   render();
 }

@@ -315,6 +315,8 @@ button.selected {
   color: var(--syntax-variable);
 }
 
+.char.typed.wrong,
+.practice-window.syntax-highlighting .char.typed.wrong,
 .practice-window.syntax-highlighting .char.current.wrong,
 .practice-window.syntax-highlighting.blocked .char.current {
   color: var(--red);
