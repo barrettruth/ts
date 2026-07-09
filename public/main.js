@@ -109,7 +109,7 @@ function itemSpans(item) {
 }
 
 function streamSeparator() {
-  return isCodeLevel() ? "\n\n" : " ";
+  return isCodeLevel() ? "" : " ";
 }
 
 function readLayoutId() {
@@ -407,6 +407,27 @@ function streamSyntaxUntil(minLength) {
   return classes;
 }
 
+function streamSnippetStartsUntil(minLength) {
+  const starts = new Set();
+  if (!isCodeLevel()) {
+    return starts;
+  }
+
+  const words = activeWords();
+  let length = 0;
+  let index = 0;
+
+  while (words.length > 0 && length <= minLength) {
+    if (index > 0) {
+      starts.add(length);
+    }
+    length += itemText(words[index % words.length]).length;
+    index += 1;
+  }
+
+  return starts;
+}
+
 function streamChar(index) {
   return streamTextUntil(index).at(index);
 }
@@ -584,16 +605,25 @@ function revealCurrent() {
     return;
   }
 
-  const windowRect = practiceWindow.getBoundingClientRect();
-  const currentRect = current.getBoundingClientRect();
-  const topEdge = windowRect.top + windowRect.height * 0.34;
-  const bottomEdge = windowRect.top + windowRect.height * 0.66;
+  const style = getComputedStyle(wordStream);
+  const lineHeight = Number.parseFloat(style.lineHeight);
+  const previous = current.previousElementSibling;
+  const lineStart =
+    current.classList.contains("break") && previous?.classList.contains("break")
+      ? previous.querySelector(".line-start-marker")
+      : null;
+  const currentTop = lineStart?.offsetTop ?? current.offsetTop;
+  const currentBottom = currentTop + lineHeight;
+  const topEdge = practiceWindow.scrollTop + practiceWindow.clientHeight * 0.3;
+  const bottomEdge = practiceWindow.scrollTop + practiceWindow.clientHeight * 0.7;
 
-  if (currentRect.top < topEdge || currentRect.bottom > bottomEdge) {
-    current.scrollIntoView({
+  if (currentTop < topEdge || currentBottom > bottomEdge) {
+    const visibleLines = Math.max(Math.floor(practiceWindow.clientHeight / lineHeight), 1);
+    const targetTop = currentTop - lineHeight * Math.floor(visibleLines * 0.4);
+    const snappedTop = Math.max(Math.round(targetTop / lineHeight) * lineHeight, 0);
+    practiceWindow.scrollTo({
+      top: snappedTop,
       behavior: "smooth",
-      block: "center",
-      inline: "nearest",
     });
   }
 }
@@ -606,23 +636,43 @@ function positionCursor() {
 
   const style = getComputedStyle(wordStream);
   const lineHeight = Number.parseFloat(style.lineHeight);
-  const anchor =
-    current.classList.contains("space") || current.classList.contains("break")
-      ? current.previousElementSibling
+  const previous = current.previousElementSibling;
+  const lineStart =
+    current.classList.contains("break") && previous?.classList.contains("break")
+      ? previous.querySelector(".line-start-marker")
       : null;
-  const x = anchor === null ? current.offsetLeft : anchor.offsetLeft + anchor.offsetWidth;
-  const y = (anchor === null ? current.offsetTop : anchor.offsetTop) + lineHeight * 0.78;
+  const anchor =
+    current.classList.contains("space") || current.classList.contains("break") ? previous : null;
+  const x =
+    lineStart?.offsetLeft ??
+    (anchor === null ? current.offsetLeft : anchor.offsetLeft + anchor.offsetWidth);
+  const y =
+    (lineStart?.offsetTop ?? (anchor === null ? current.offsetTop : anchor.offsetTop)) +
+    lineHeight * 0.78;
   cursorElement.style.transform = `translate(${x}px, ${y}px)`;
 }
 
 function renderStream() {
   const fragment = document.createDocumentFragment();
   const syntaxClasses = streamSyntaxUntil(cursor + 900);
+  const snippetStarts = streamSnippetStartsUntil(cursor + 900);
 
   for (const [index, char] of streamWindow()) {
+    if (snippetStarts.has(index)) {
+      const separator = document.createElement("span");
+      separator.className = "code-snippet-separator";
+      fragment.append(separator);
+    }
+
     const span = document.createElement("span");
     span.className = charClass(index, char, syntaxClasses[index]);
-    span.textContent = char;
+    if (char === "\n") {
+      const marker = document.createElement("span");
+      marker.className = "line-start-marker";
+      span.append("\n", marker);
+    } else {
+      span.textContent = char;
+    }
     if (index === cursor) {
       span.id = "current-char";
     }

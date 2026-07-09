@@ -177,9 +177,10 @@ button.selected {
 }
 
 .practice-window {
+  --practice-window-height: clamp(17.98rem, 36.54vw, 36.54rem);
   grid-column: 2;
   align-self: center;
-  height: calc(1.45em * 8);
+  height: var(--practice-window-height);
   overflow: hidden;
   scroll-behavior: smooth;
   font-family:
@@ -236,6 +237,22 @@ button.selected {
     background-color 90ms ease-out;
 }
 
+.line-start-marker {
+  display: inline-block;
+  width: 0;
+  height: 1em;
+  overflow: hidden;
+}
+
+.code-snippet-separator {
+  display: block;
+  width: 100%;
+  height: 0;
+  margin: 1.15em 0;
+  border-top: 1px solid var(--quiet);
+  opacity: 0.38;
+}
+
 .char.current.wrong,
 .practice-window.blocked .char.current {
   color: var(--red);
@@ -246,7 +263,6 @@ button.selected {
 }
 
 .practice-window.syntax-highlighting {
-  height: calc(1.45em * 12);
   font-size: clamp(1rem, 1.55vw, 1.45rem);
   line-height: 1.45;
 }
@@ -371,13 +387,12 @@ button.selected {
   }
 
   .practice-window {
-    height: calc(1.48em * 7);
+    --practice-window-height: clamp(15.02rem, 62.16vw, 24.35rem);
     font-size: clamp(1.45rem, 6vw, 2.35rem);
     line-height: 1.48;
   }
 
   .practice-window.syntax-highlighting {
-    height: calc(1.45em * 10);
     font-size: clamp(0.95rem, 3.8vw, 1.3rem);
     line-height: 1.45;
   }
