@@ -16,6 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Wait for quality
+        if: ${{ github.event_name == 'push' }}
         run: nix shell nixpkgs#curl nixpkgs#jq -c bash .forgejo/scripts/wait-for-quality.sh
       - name: Build
         run: nix develop .#ci --command just build
