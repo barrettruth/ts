@@ -3,6 +3,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -170,8 +171,18 @@ def validate_comments(path, language, code):
             run = 0
 
 
-def validate(path, language, code):
-    if len(code) < 800 or len(code) > 3800:
+def trim_leading_indent(code):
+    first_line = code.split("\n", 1)[0]
+    indent_width = len(first_line) - len(first_line.lstrip(" "))
+    if indent_width == 0:
+        return code
+
+    lines = code.split("\n")
+    return "\n".join(line[min(len(line) - len(line.lstrip(" ")), indent_width) :] for line in lines)
+
+
+def validate(path, language, code, check_length=True):
+    if check_length and (len(code) < 800 or len(code) > 3800):
         fail(f"{path}: snippet length outside 800-3800 characters")
     if "\r" in code or "\t" in code:
         fail(f"{path}: snippets must use Unix newlines and spaces")
@@ -187,22 +198,28 @@ def validate(path, language, code):
 def highlighted(config_path, path, code, language):
     env = os.environ.copy()
     env.setdefault("XDG_CACHE_HOME", str(Path(config_path).parent / "cache"))
-    result = subprocess.run(
-        [
-            "tree-sitter",
-            "highlight",
-            "--html",
-            "--css-classes",
-            "--config-path",
-            str(config_path),
-            str(path),
-        ],
-        check=False,
-        env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
+    with tempfile.NamedTemporaryFile("w", suffix=path.suffix, delete=False) as source:
+        source.write(code)
+        source_path = Path(source.name)
+    try:
+        result = subprocess.run(
+            [
+                "tree-sitter",
+                "highlight",
+                "--html",
+                "--css-classes",
+                "--config-path",
+                str(config_path),
+                str(source_path),
+            ],
+            check=False,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    finally:
+        source_path.unlink(missing_ok=True)
     if result.returncode != 0:
         fail(f"{path}: tree-sitter highlight failed\n{result.stderr}")
     parser = HighlightParser(language)
@@ -245,8 +262,10 @@ def main():
         fail(f"{snippet_dir}: no code snippets found")
     for path in paths:
         language = languages[path.suffix]
-        code = path.read_text().rstrip("\n")
-        validate(path, language, code)
+        source_code = path.read_text().rstrip("\n")
+        validate(path, language, source_code)
+        code = trim_leading_indent(source_code)
+        validate(path, language, code, check_length=False)
         if code in seen:
             fail(f"{path}: duplicate snippet")
         seen.add(code)

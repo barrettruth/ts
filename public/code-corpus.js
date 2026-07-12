@@ -5047,25 +5047,30 @@ export const codeSnippets = [
   {
     "language": "cpp",
     "name": "cpp/libstdcxx_hashtable_erase.cpp",
-    "code": "    auto\n    _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n               _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n    _M_erase(size_type __bkt, __node_base_ptr __prev_n, __node_ptr __n)\n    -> iterator\n    {\n      if (__prev_n == _M_buckets[__bkt])\n        _M_remove_bucket_begin(__bkt, __n->_M_next(),\n          __n->_M_nxt ? _M_bucket_index(*__n->_M_next()) : 0);\n      else if (__n->_M_nxt)\n        {\n          size_type __next_bkt = _M_bucket_index(*__n->_M_next());\n          if (__next_bkt != __bkt)\n            _M_buckets[__next_bkt] = __prev_n;\n        }\n\n      __prev_n->_M_nxt = __n->_M_nxt;\n      iterator __result(__n->_M_next());\n      this->_M_deallocate_node(__n);\n      --_M_element_count;\n\n      return __result;\n    }\n\n#pragma GCC diagnostic push\n#pragma GCC diagnostic ignored \"-Wc++17-extensions\" // if constexpr\n  template<typename _Key, typename _Value, typename _Alloc,\n           typename _ExtractKey, typename _Equal,\n           typename _Hash, typename _RangeHash, typename _Unused,\n           typename _RehashPolicy, typename _Traits>\n    auto\n    _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n               _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n    erase(const key_type& __k)\n    -> size_type\n    {\n      auto __loc = _M_locate(__k);\n      if (!__loc)\n        return 0;\n\n      __node_base_ptr __prev_n = __loc._M_before;\n      __node_ptr __n = __loc._M_node();\n      auto __bkt = __loc._M_bucket_index;\n      if (__bkt == size_type(-1))\n        __bkt = _M_bucket_index(*__n);\n\n      if constexpr (__unique_keys::value)\n        {\n          _M_erase(__bkt, __prev_n, __n);\n          return 1;\n        }\n      else\n        {\n          // _GLIBCXX_RESOLVE_LIB_DEFECTS\n          // 526. Is it undefined if a function in the standard changes\n          // in parameters?\n          // We use one loop to find all matching nodes and another to\n          // deallocate them so that the key stays valid during the first loop.\n          // It might be invalidated indirectly when destroying nodes.\n          __node_ptr __n_last = __n->_M_next();\n          while (__n_last && this->_M_node_equals(*__n, *__n_last))\n            __n_last = __n_last->_M_next();\n\n          std::size_t __n_last_bkt\n            = __n_last ? _M_bucket_index(*__n_last) : __bkt;\n\n          // Deallocate nodes.\n          size_type __result = 0;\n          do\n            {\n              __node_ptr __p = __n->_M_next();\n              this->_M_deallocate_node(__n);\n              __n = __p;\n              ++__result;\n            }\n          while (__n != __n_last);\n\n          _M_element_count -= __result;\n          if (__prev_n == _M_buckets[__bkt])\n            _M_remove_bucket_begin(__bkt, __n_last, __n_last_bkt);\n          else if (__n_last_bkt != __bkt)\n            _M_buckets[__n_last_bkt] = __prev_n;\n          __prev_n->_M_nxt = __n_last;\n          return __result;\n        }\n    }\n#pragma GCC diagnostic pop",
+    "code": "auto\n_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n           _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n_M_erase(size_type __bkt, __node_base_ptr __prev_n, __node_ptr __n)\n-> iterator\n{\n  if (__prev_n == _M_buckets[__bkt])\n    _M_remove_bucket_begin(__bkt, __n->_M_next(),\n      __n->_M_nxt ? _M_bucket_index(*__n->_M_next()) : 0);\n  else if (__n->_M_nxt)\n    {\n      size_type __next_bkt = _M_bucket_index(*__n->_M_next());\n      if (__next_bkt != __bkt)\n        _M_buckets[__next_bkt] = __prev_n;\n    }\n\n  __prev_n->_M_nxt = __n->_M_nxt;\n  iterator __result(__n->_M_next());\n  this->_M_deallocate_node(__n);\n  --_M_element_count;\n\n  return __result;\n}\n\n#pragma GCC diagnostic push\n#pragma GCC diagnostic ignored \"-Wc++17-extensions\" // if constexpr\ntemplate<typename _Key, typename _Value, typename _Alloc,\n       typename _ExtractKey, typename _Equal,\n       typename _Hash, typename _RangeHash, typename _Unused,\n       typename _RehashPolicy, typename _Traits>\nauto\n_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n           _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\nerase(const key_type& __k)\n-> size_type\n{\n  auto __loc = _M_locate(__k);\n  if (!__loc)\n    return 0;\n\n  __node_base_ptr __prev_n = __loc._M_before;\n  __node_ptr __n = __loc._M_node();\n  auto __bkt = __loc._M_bucket_index;\n  if (__bkt == size_type(-1))\n    __bkt = _M_bucket_index(*__n);\n\n  if constexpr (__unique_keys::value)\n    {\n      _M_erase(__bkt, __prev_n, __n);\n      return 1;\n    }\n  else\n    {\n      // _GLIBCXX_RESOLVE_LIB_DEFECTS\n      // 526. Is it undefined if a function in the standard changes\n      // in parameters?\n      // We use one loop to find all matching nodes and another to\n      // deallocate them so that the key stays valid during the first loop.\n      // It might be invalidated indirectly when destroying nodes.\n      __node_ptr __n_last = __n->_M_next();\n      while (__n_last && this->_M_node_equals(*__n, *__n_last))\n        __n_last = __n_last->_M_next();\n\n      std::size_t __n_last_bkt\n        = __n_last ? _M_bucket_index(*__n_last) : __bkt;\n\n      // Deallocate nodes.\n      size_type __result = 0;\n      do\n        {\n          __node_ptr __p = __n->_M_next();\n          this->_M_deallocate_node(__n);\n          __n = __p;\n          ++__result;\n        }\n      while (__n != __n_last);\n\n      _M_element_count -= __result;\n      if (__prev_n == _M_buckets[__bkt])\n        _M_remove_bucket_begin(__bkt, __n_last, __n_last_bkt);\n      else if (__n_last_bkt != __bkt)\n        _M_buckets[__n_last_bkt] = __prev_n;\n      __prev_n->_M_nxt = __n_last;\n      return __result;\n    }\n}\n#pragma GCC diagnostic pop",
     "spans": [
       {
-        "start": 4,
-        "end": 8,
+        "start": 0,
+        "end": 4,
         "className": "syntax-type"
       },
       {
-        "start": 13,
-        "end": 23,
+        "start": 5,
+        "end": 15,
         "className": "syntax-type"
       },
       {
-        "start": 23,
-        "end": 24,
+        "start": 15,
+        "end": 16,
         "className": "syntax-operator"
       },
       {
-        "start": 24,
+        "start": 16,
+        "end": 20,
+        "className": "syntax-type"
+      },
+      {
+        "start": 22,
         "end": 28,
         "className": "syntax-type"
       },
@@ -5076,1753 +5081,446 @@ export const codeSnippets = [
       },
       {
         "start": 38,
-        "end": 44,
+        "end": 49,
         "className": "syntax-type"
       },
       {
-        "start": 46,
+        "start": 51,
         "end": 57,
         "className": "syntax-type"
       },
       {
-        "start": 59,
-        "end": 65,
+        "start": 70,
+        "end": 75,
         "className": "syntax-type"
       },
       {
-        "start": 82,
+        "start": 77,
         "end": 87,
         "className": "syntax-type"
       },
       {
         "start": 89,
-        "end": 99,
+        "end": 96,
         "className": "syntax-type"
       },
       {
-        "start": 101,
-        "end": 108,
+        "start": 98,
+        "end": 111,
         "className": "syntax-type"
       },
       {
-        "start": 110,
-        "end": 123,
+        "start": 113,
+        "end": 120,
         "className": "syntax-type"
       },
       {
-        "start": 125,
-        "end": 132,
-        "className": "syntax-type"
-      },
-      {
-        "start": 132,
-        "end": 133,
+        "start": 120,
+        "end": 121,
         "className": "syntax-operator"
       },
       {
-        "start": 140,
-        "end": 148,
+        "start": 124,
+        "end": 132,
         "className": "syntax-function"
       },
       {
-        "start": 149,
-        "end": 158,
+        "start": 133,
+        "end": 142,
         "className": "syntax-type"
       },
       {
-        "start": 159,
-        "end": 164,
+        "start": 143,
+        "end": 148,
         "className": "syntax-variable"
       },
       {
-        "start": 166,
-        "end": 181,
+        "start": 150,
+        "end": 165,
         "className": "syntax-type"
       },
       {
-        "start": 182,
+        "start": 166,
+        "end": 174,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 176,
+        "end": 186,
+        "className": "syntax-type"
+      },
+      {
+        "start": 187,
         "end": 190,
         "className": "syntax-variable"
       },
       {
         "start": 192,
-        "end": 202,
-        "className": "syntax-type"
-      },
-      {
-        "start": 203,
-        "end": 206,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 212,
-        "end": 214,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 215,
-        "end": 223,
-        "className": "syntax-type"
-      },
-      {
-        "start": 236,
-        "end": 238,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 240,
-        "end": 248,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 249,
-        "end": 251,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 252,
-        "end": 262,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 263,
-        "end": 268,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 279,
-        "end": 301,
-        "className": "syntax-function"
-      },
-      {
-        "start": 302,
-        "end": 307,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 309,
-        "end": 312,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 312,
-        "end": 314,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 314,
-        "end": 321,
-        "className": "syntax-function"
-      },
-      {
-        "start": 335,
-        "end": 338,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 338,
-        "end": 340,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 340,
-        "end": 346,
-        "className": "syntax-property"
-      },
-      {
-        "start": 349,
-        "end": 364,
-        "className": "syntax-function"
-      },
-      {
-        "start": 365,
-        "end": 366,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 366,
-        "end": 369,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 369,
-        "end": 371,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 371,
-        "end": 378,
-        "className": "syntax-function"
-      },
-      {
-        "start": 384,
-        "end": 385,
-        "className": "syntax-number"
-      },
-      {
-        "start": 394,
-        "end": 398,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 399,
-        "end": 401,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 403,
-        "end": 406,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 406,
-        "end": 408,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 408,
-        "end": 414,
-        "className": "syntax-property"
-      },
-      {
-        "start": 436,
-        "end": 445,
-        "className": "syntax-type"
-      },
-      {
-        "start": 446,
-        "end": 456,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 457,
-        "end": 458,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 459,
-        "end": 474,
-        "className": "syntax-function"
-      },
-      {
-        "start": 475,
-        "end": 476,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 476,
-        "end": 479,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 479,
-        "end": 481,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 481,
-        "end": 488,
-        "className": "syntax-function"
-      },
-      {
-        "start": 503,
-        "end": 505,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 507,
-        "end": 517,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 518,
-        "end": 520,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 521,
-        "end": 526,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 540,
-        "end": 550,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 551,
-        "end": 561,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 563,
-        "end": 564,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 565,
-        "end": 573,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 592,
-        "end": 600,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 600,
-        "end": 602,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 602,
-        "end": 608,
-        "className": "syntax-property"
-      },
-      {
-        "start": 609,
-        "end": 610,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 611,
-        "end": 614,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 614,
-        "end": 616,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 616,
-        "end": 622,
-        "className": "syntax-property"
-      },
-      {
-        "start": 630,
-        "end": 638,
-        "className": "syntax-type"
-      },
-      {
-        "start": 639,
-        "end": 647,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 648,
-        "end": 651,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 651,
-        "end": 653,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 653,
-        "end": 660,
-        "className": "syntax-function"
-      },
-      {
-        "start": 671,
-        "end": 675,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 675,
-        "end": 677,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 677,
-        "end": 695,
-        "className": "syntax-function"
-      },
-      {
-        "start": 696,
-        "end": 699,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 708,
-        "end": 710,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 710,
-        "end": 726,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 735,
-        "end": 741,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 742,
-        "end": 750,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 759,
-        "end": 766,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 787,
-        "end": 794,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 857,
-        "end": 865,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 865,
-        "end": 866,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 866,
-        "end": 874,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 875,
-        "end": 879,
-        "className": "syntax-type"
-      },
-      {
-        "start": 881,
-        "end": 889,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 890,
-        "end": 896,
-        "className": "syntax-type"
-      },
-      {
-        "start": 898,
-        "end": 906,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 907,
-        "end": 913,
-        "className": "syntax-type"
-      },
-      {
-        "start": 926,
-        "end": 934,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 935,
-        "end": 946,
-        "className": "syntax-type"
-      },
-      {
-        "start": 948,
-        "end": 956,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 957,
-        "end": 963,
-        "className": "syntax-type"
-      },
-      {
-        "start": 976,
-        "end": 984,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 985,
-        "end": 990,
-        "className": "syntax-type"
-      },
-      {
-        "start": 992,
-        "end": 1000,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1001,
-        "end": 1011,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1013,
-        "end": 1021,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1022,
-        "end": 1029,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1042,
-        "end": 1050,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1051,
-        "end": 1064,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1066,
-        "end": 1074,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1075,
-        "end": 1082,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1082,
-        "end": 1083,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1088,
-        "end": 1092,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1097,
-        "end": 1107,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1107,
-        "end": 1108,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1108,
-        "end": 1112,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1114,
-        "end": 1120,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1122,
-        "end": 1128,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1130,
-        "end": 1141,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1143,
-        "end": 1149,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1166,
-        "end": 1171,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1173,
-        "end": 1183,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1185,
-        "end": 1192,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1194,
-        "end": 1207,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1209,
-        "end": 1216,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1216,
-        "end": 1217,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1224,
-        "end": 1229,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1230,
-        "end": 1235,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1236,
-        "end": 1244,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1244,
-        "end": 1245,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1246,
-        "end": 1249,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1255,
-        "end": 1257,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1258,
-        "end": 1267,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1280,
-        "end": 1284,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1285,
-        "end": 1290,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1291,
-        "end": 1292,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1293,
-        "end": 1302,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1303,
-        "end": 1306,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1315,
-        "end": 1317,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1320,
-        "end": 1325,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1335,
-        "end": 1341,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1342,
-        "end": 1343,
-        "className": "syntax-number"
-      },
-      {
-        "start": 1352,
-        "end": 1367,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1368,
-        "end": 1376,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1377,
-        "end": 1378,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1379,
-        "end": 1384,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1385,
-        "end": 1394,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1402,
-        "end": 1412,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1413,
-        "end": 1416,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1417,
-        "end": 1418,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1419,
-        "end": 1424,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1425,
-        "end": 1432,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1442,
-        "end": 1446,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1447,
-        "end": 1452,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1453,
-        "end": 1454,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1455,
-        "end": 1460,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1461,
-        "end": 1476,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1484,
-        "end": 1486,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1488,
-        "end": 1493,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1494,
-        "end": 1496,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1497,
-        "end": 1506,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1507,
-        "end": 1509,
-        "className": "syntax-number"
-      },
-      {
-        "start": 1520,
-        "end": 1525,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1526,
-        "end": 1527,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1528,
-        "end": 1543,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1544,
-        "end": 1545,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1545,
-        "end": 1548,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1558,
-        "end": 1560,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1561,
-        "end": 1570,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1587,
-        "end": 1592,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1614,
-        "end": 1622,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1623,
-        "end": 1628,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1630,
-        "end": 1638,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1640,
-        "end": 1643,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1656,
-        "end": 1662,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1663,
-        "end": 1664,
-        "className": "syntax-number"
-      },
-      {
-        "start": 1682,
-        "end": 1686,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1707,
-        "end": 1738,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1749,
-        "end": 1810,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1821,
-        "end": 1838,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1849,
-        "end": 1909,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1920,
-        "end": 1989,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2000,
-        "end": 2060,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2071,
-        "end": 2081,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2082,
-        "end": 2090,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2091,
-        "end": 2092,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2093,
-        "end": 2096,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2096,
-        "end": 2098,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2098,
-        "end": 2105,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2119,
-        "end": 2124,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2126,
-        "end": 2134,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2135,
-        "end": 2137,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2138,
-        "end": 2142,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2142,
-        "end": 2144,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2144,
-        "end": 2158,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2159,
-        "end": 2160,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2160,
-        "end": 2163,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2165,
-        "end": 2166,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2166,
-        "end": 2174,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2189,
-        "end": 2197,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2198,
-        "end": 2199,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2200,
-        "end": 2208,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2208,
-        "end": 2210,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2210,
-        "end": 2217,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2237,
-        "end": 2243,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2244,
-        "end": 2256,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2269,
-        "end": 2270,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2271,
-        "end": 2279,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2282,
-        "end": 2297,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2298,
-        "end": 2299,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2299,
-        "end": 2307,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2311,
-        "end": 2316,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2329,
-        "end": 2349,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2360,
-        "end": 2369,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2370,
-        "end": 2378,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2379,
-        "end": 2380,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2381,
-        "end": 2382,
-        "className": "syntax-number"
-      },
-      {
-        "start": 2394,
-        "end": 2396,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2425,
-        "end": 2435,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2436,
-        "end": 2439,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2440,
-        "end": 2441,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2442,
-        "end": 2445,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2445,
-        "end": 2447,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2447,
-        "end": 2454,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2472,
-        "end": 2476,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2476,
-        "end": 2478,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2478,
-        "end": 2496,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2497,
-        "end": 2500,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2517,
-        "end": 2520,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2521,
-        "end": 2522,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2523,
-        "end": 2526,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2542,
-        "end": 2544,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2544,
-        "end": 2552,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2578,
-        "end": 2583,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2585,
-        "end": 2588,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2589,
-        "end": 2591,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2592,
-        "end": 2600,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2614,
-        "end": 2630,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2631,
-        "end": 2633,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2634,
-        "end": 2642,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2654,
-        "end": 2656,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2658,
-        "end": 2666,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2667,
-        "end": 2669,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2670,
-        "end": 2680,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2681,
-        "end": 2686,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2701,
-        "end": 2723,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2724,
-        "end": 2729,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2731,
-        "end": 2739,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2741,
-        "end": 2753,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2766,
-        "end": 2770,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2771,
-        "end": 2773,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2775,
-        "end": 2787,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2788,
-        "end": 2790,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2791,
-        "end": 2796,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2810,
-        "end": 2820,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2821,
-        "end": 2833,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2835,
-        "end": 2836,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2837,
-        "end": 2845,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2857,
-        "end": 2865,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2865,
-        "end": 2867,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2867,
-        "end": 2873,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2874,
-        "end": 2875,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2876,
-        "end": 2884,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2896,
-        "end": 2902,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2903,
-        "end": 2911,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2929,
-        "end": 2936,
-        "className": "syntax-keyword"
-      }
-    ]
-  },
-  {
-    "language": "cpp",
-    "name": "cpp/libstdcxx_hashtable_find.cpp",
-    "code": "    auto\n    _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n               _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n    find(const key_type& __k)\n    -> iterator\n    { return iterator(_M_locate(__k)); }\n\n  template<typename _Key, typename _Value, typename _Alloc,\n           typename _ExtractKey, typename _Equal,\n           typename _Hash, typename _RangeHash, typename _Unused,\n           typename _RehashPolicy, typename _Traits>\n    auto\n    _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n               _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n    find(const key_type& __k) const\n    -> const_iterator\n    { return const_iterator(_M_locate(__k)); }\n\n#if __cplusplus > 201703L\n  template<typename _Key, typename _Value, typename _Alloc,\n           typename _ExtractKey, typename _Equal,\n           typename _Hash, typename _RangeHash, typename _Unused,\n           typename _RehashPolicy, typename _Traits>\n    template<typename _Kt, typename, typename>\n      auto\n      _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n                 _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n      _M_find_tr(const _Kt& __k)\n      -> iterator\n      {\n        if (size() <= __small_size_threshold())\n          {\n            for (auto __n = _M_begin(); __n; __n = __n->_M_next())\n              if (this->_M_key_equals_tr(__k, *__n))\n                return iterator(__n);\n            return end();\n          }\n\n        __hash_code __code = this->_M_hash_code_tr(__k);\n        std::size_t __bkt = _M_bucket_index(__code);\n        return iterator(_M_find_node_tr(__bkt, __k, __code));\n      }\n\n  template<typename _Key, typename _Value, typename _Alloc,\n           typename _ExtractKey, typename _Equal,\n           typename _Hash, typename _RangeHash, typename _Unused,\n           typename _RehashPolicy, typename _Traits>\n    template<typename _Kt, typename, typename>\n      auto\n      _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n                 _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n      _M_find_tr(const _Kt& __k) const\n      -> const_iterator\n      {\n        if (size() <= __small_size_threshold())\n          {\n            for (auto __n = _M_begin(); __n; __n = __n->_M_next())\n              if (this->_M_key_equals_tr(__k, *__n))\n                return const_iterator(__n);\n            return end();\n          }\n\n        __hash_code __code = this->_M_hash_code_tr(__k);\n        std::size_t __bkt = _M_bucket_index(__code);\n        return const_iterator(_M_find_node_tr(__bkt, __k, __code));\n      }\n#endif\n\n  template<typename _Key, typename _Value, typename _Alloc,\n           typename _ExtractKey, typename _Equal,\n           typename _Hash, typename _RangeHash, typename _Unused,\n           typename _RehashPolicy, typename _Traits>\n    auto\n    _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n               _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n    count(const key_type& __k) const\n    -> size_type\n    {\n      auto __it = find(__k);\n      if (!__it._M_cur)\n        return 0;\n\n      if (__unique_keys::value)\n        return 1;",
-    "spans": [
-      {
-        "start": 4,
-        "end": 8,
-        "className": "syntax-type"
-      },
-      {
-        "start": 13,
-        "end": 23,
-        "className": "syntax-type"
-      },
-      {
-        "start": 23,
-        "end": 24,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 24,
-        "end": 28,
-        "className": "syntax-type"
-      },
-      {
-        "start": 30,
-        "end": 36,
-        "className": "syntax-type"
-      },
-      {
-        "start": 38,
-        "end": 44,
-        "className": "syntax-type"
-      },
-      {
-        "start": 46,
-        "end": 57,
-        "className": "syntax-type"
-      },
-      {
-        "start": 59,
-        "end": 65,
-        "className": "syntax-type"
-      },
-      {
-        "start": 82,
-        "end": 87,
-        "className": "syntax-type"
-      },
-      {
-        "start": 89,
-        "end": 99,
-        "className": "syntax-type"
-      },
-      {
-        "start": 101,
-        "end": 108,
-        "className": "syntax-type"
-      },
-      {
-        "start": 110,
-        "end": 123,
-        "className": "syntax-type"
-      },
-      {
-        "start": 125,
-        "end": 132,
-        "className": "syntax-type"
-      },
-      {
-        "start": 132,
-        "end": 133,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 140,
-        "end": 144,
-        "className": "syntax-function"
-      },
-      {
-        "start": 145,
-        "end": 150,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 151,
-        "end": 159,
-        "className": "syntax-type"
-      },
-      {
-        "start": 159,
-        "end": 160,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 161,
-        "end": 164,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 170,
-        "end": 172,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 173,
-        "end": 181,
-        "className": "syntax-type"
-      },
-      {
-        "start": 188,
         "end": 194,
-        "className": "syntax-keyword"
+        "className": "syntax-operator"
       },
       {
         "start": 195,
         "end": 203,
-        "className": "syntax-function"
+        "className": "syntax-type"
       },
       {
-        "start": 204,
-        "end": 213,
-        "className": "syntax-function"
-      },
-      {
-        "start": 214,
-        "end": 217,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 226,
-        "end": 234,
+        "start": 208,
+        "end": 210,
         "className": "syntax-keyword"
       },
       {
-        "start": 234,
-        "end": 235,
+        "start": 212,
+        "end": 220,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 221,
+        "end": 223,
         "className": "syntax-operator"
+      },
+      {
+        "start": 224,
+        "end": 234,
+        "className": "syntax-variable"
       },
       {
         "start": 235,
-        "end": 243,
-        "className": "syntax-keyword"
+        "end": 240,
+        "className": "syntax-variable"
       },
       {
-        "start": 244,
-        "end": 248,
-        "className": "syntax-type"
+        "start": 247,
+        "end": 269,
+        "className": "syntax-function"
       },
       {
-        "start": 250,
-        "end": 258,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 259,
-        "end": 265,
-        "className": "syntax-type"
-      },
-      {
-        "start": 267,
+        "start": 270,
         "end": 275,
-        "className": "syntax-keyword"
+        "className": "syntax-variable"
       },
       {
-        "start": 276,
+        "start": 277,
+        "end": 280,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 280,
         "end": 282,
-        "className": "syntax-type"
+        "className": "syntax-operator"
       },
       {
-        "start": 295,
-        "end": 303,
-        "className": "syntax-keyword"
+        "start": 282,
+        "end": 289,
+        "className": "syntax-function"
+      },
+      {
+        "start": 299,
+        "end": 302,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 302,
+        "end": 304,
+        "className": "syntax-operator"
       },
       {
         "start": 304,
-        "end": 315,
-        "className": "syntax-type"
+        "end": 310,
+        "className": "syntax-property"
       },
       {
-        "start": 317,
-        "end": 325,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 326,
-        "end": 332,
-        "className": "syntax-type"
-      },
-      {
-        "start": 345,
-        "end": 353,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 354,
-        "end": 359,
-        "className": "syntax-type"
-      },
-      {
-        "start": 361,
-        "end": 369,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 370,
-        "end": 380,
-        "className": "syntax-type"
-      },
-      {
-        "start": 382,
-        "end": 390,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 391,
-        "end": 398,
-        "className": "syntax-type"
-      },
-      {
-        "start": 411,
-        "end": 419,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 420,
-        "end": 433,
-        "className": "syntax-type"
-      },
-      {
-        "start": 435,
-        "end": 443,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 444,
-        "end": 451,
-        "className": "syntax-type"
-      },
-      {
-        "start": 451,
-        "end": 452,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 457,
-        "end": 461,
-        "className": "syntax-type"
-      },
-      {
-        "start": 466,
-        "end": 476,
-        "className": "syntax-type"
-      },
-      {
-        "start": 476,
-        "end": 477,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 477,
-        "end": 481,
-        "className": "syntax-type"
-      },
-      {
-        "start": 483,
-        "end": 489,
-        "className": "syntax-type"
-      },
-      {
-        "start": 491,
-        "end": 497,
-        "className": "syntax-type"
-      },
-      {
-        "start": 499,
-        "end": 510,
-        "className": "syntax-type"
-      },
-      {
-        "start": 512,
-        "end": 518,
-        "className": "syntax-type"
-      },
-      {
-        "start": 535,
-        "end": 540,
-        "className": "syntax-type"
-      },
-      {
-        "start": 542,
-        "end": 552,
-        "className": "syntax-type"
-      },
-      {
-        "start": 554,
-        "end": 561,
-        "className": "syntax-type"
-      },
-      {
-        "start": 563,
-        "end": 576,
-        "className": "syntax-type"
-      },
-      {
-        "start": 578,
-        "end": 585,
-        "className": "syntax-type"
-      },
-      {
-        "start": 585,
-        "end": 586,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 593,
-        "end": 597,
+        "start": 313,
+        "end": 328,
         "className": "syntax-function"
       },
       {
-        "start": 598,
-        "end": 603,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 604,
-        "end": 612,
-        "className": "syntax-type"
-      },
-      {
-        "start": 612,
-        "end": 613,
+        "start": 329,
+        "end": 330,
         "className": "syntax-operator"
       },
       {
-        "start": 614,
-        "end": 617,
+        "start": 330,
+        "end": 333,
         "className": "syntax-variable"
       },
       {
-        "start": 619,
-        "end": 624,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 629,
-        "end": 631,
+        "start": 333,
+        "end": 335,
         "className": "syntax-operator"
       },
       {
-        "start": 632,
-        "end": 646,
-        "className": "syntax-type"
-      },
-      {
-        "start": 653,
-        "end": 659,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 660,
-        "end": 674,
+        "start": 335,
+        "end": 342,
         "className": "syntax-function"
       },
       {
-        "start": 675,
-        "end": 684,
-        "className": "syntax-function"
-      },
-      {
-        "start": 685,
-        "end": 688,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 695,
-        "end": 698,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 699,
-        "end": 710,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 711,
-        "end": 712,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 713,
-        "end": 720,
+        "start": 348,
+        "end": 349,
         "className": "syntax-number"
       },
       {
-        "start": 723,
-        "end": 731,
+        "start": 354,
+        "end": 358,
         "className": "syntax-keyword"
       },
       {
-        "start": 731,
-        "end": 732,
+        "start": 359,
+        "end": 361,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 363,
+        "end": 366,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 366,
+        "end": 368,
         "className": "syntax-operator"
       },
       {
-        "start": 732,
-        "end": 740,
-        "className": "syntax-keyword"
+        "start": 368,
+        "end": 374,
+        "className": "syntax-property"
       },
       {
-        "start": 741,
-        "end": 745,
+        "start": 388,
+        "end": 397,
         "className": "syntax-type"
       },
       {
-        "start": 747,
-        "end": 755,
+        "start": 398,
+        "end": 408,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 409,
+        "end": 410,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 411,
+        "end": 426,
+        "className": "syntax-function"
+      },
+      {
+        "start": 427,
+        "end": 428,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 428,
+        "end": 431,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 431,
+        "end": 433,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 433,
+        "end": 440,
+        "className": "syntax-function"
+      },
+      {
+        "start": 451,
+        "end": 453,
         "className": "syntax-keyword"
       },
       {
-        "start": 756,
-        "end": 762,
+        "start": 455,
+        "end": 465,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 466,
+        "end": 468,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 469,
+        "end": 474,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 484,
+        "end": 494,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 495,
+        "end": 505,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 507,
+        "end": 508,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 509,
+        "end": 517,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 528,
+        "end": 536,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 536,
+        "end": 538,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 538,
+        "end": 544,
+        "className": "syntax-property"
+      },
+      {
+        "start": 545,
+        "end": 546,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 547,
+        "end": 550,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 550,
+        "end": 552,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 552,
+        "end": 558,
+        "className": "syntax-property"
+      },
+      {
+        "start": 562,
+        "end": 570,
         "className": "syntax-type"
       },
       {
-        "start": 764,
-        "end": 772,
+        "start": 571,
+        "end": 579,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 580,
+        "end": 583,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 583,
+        "end": 585,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 585,
+        "end": 592,
+        "className": "syntax-function"
+      },
+      {
+        "start": 599,
+        "end": 603,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 603,
+        "end": 605,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 605,
+        "end": 623,
+        "className": "syntax-function"
+      },
+      {
+        "start": 624,
+        "end": 627,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 632,
+        "end": 634,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 634,
+        "end": 650,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 655,
+        "end": 661,
         "className": "syntax-keyword"
       },
       {
-        "start": 773,
+        "start": 662,
+        "end": 670,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 675,
+        "end": 682,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 703,
+        "end": 710,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 771,
         "end": 779,
-        "className": "syntax-type"
-      },
-      {
-        "start": 792,
-        "end": 800,
         "className": "syntax-keyword"
       },
       {
-        "start": 801,
-        "end": 812,
-        "className": "syntax-type"
+        "start": 779,
+        "end": 780,
+        "className": "syntax-operator"
       },
       {
-        "start": 814,
-        "end": 822,
+        "start": 780,
+        "end": 788,
         "className": "syntax-keyword"
       },
       {
-        "start": 823,
-        "end": 829,
+        "start": 789,
+        "end": 793,
         "className": "syntax-type"
       },
       {
-        "start": 842,
-        "end": 850,
+        "start": 795,
+        "end": 803,
         "className": "syntax-keyword"
       },
       {
-        "start": 851,
+        "start": 804,
+        "end": 810,
+        "className": "syntax-type"
+      },
+      {
+        "start": 812,
+        "end": 820,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 821,
+        "end": 827,
+        "className": "syntax-type"
+      },
+      {
+        "start": 836,
+        "end": 844,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 845,
         "end": 856,
         "className": "syntax-type"
       },
@@ -6833,163 +5531,178 @@ export const codeSnippets = [
       },
       {
         "start": 867,
-        "end": 877,
+        "end": 873,
         "className": "syntax-type"
       },
       {
-        "start": 879,
-        "end": 887,
+        "start": 882,
+        "end": 890,
         "className": "syntax-keyword"
       },
       {
-        "start": 888,
-        "end": 895,
+        "start": 891,
+        "end": 896,
         "className": "syntax-type"
       },
       {
-        "start": 908,
-        "end": 916,
+        "start": 898,
+        "end": 906,
         "className": "syntax-keyword"
       },
       {
-        "start": 917,
-        "end": 930,
+        "start": 907,
+        "end": 917,
         "className": "syntax-type"
       },
       {
-        "start": 932,
-        "end": 940,
+        "start": 919,
+        "end": 927,
         "className": "syntax-keyword"
       },
       {
-        "start": 941,
-        "end": 948,
+        "start": 928,
+        "end": 935,
         "className": "syntax-type"
       },
       {
-        "start": 948,
-        "end": 949,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 954,
-        "end": 962,
+        "start": 944,
+        "end": 952,
         "className": "syntax-keyword"
       },
       {
-        "start": 962,
-        "end": 963,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 963,
-        "end": 971,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 972,
-        "end": 975,
+        "start": 953,
+        "end": 966,
         "className": "syntax-type"
+      },
+      {
+        "start": 968,
+        "end": 976,
+        "className": "syntax-keyword"
       },
       {
         "start": 977,
-        "end": 985,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 987,
-        "end": 995,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 995,
-        "end": 996,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1003,
-        "end": 1007,
+        "end": 984,
         "className": "syntax-type"
       },
       {
-        "start": 1014,
-        "end": 1024,
+        "start": 984,
+        "end": 985,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 986,
+        "end": 990,
+        "className": "syntax-type"
+      },
+      {
+        "start": 991,
+        "end": 1001,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1001,
+        "end": 1002,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1002,
+        "end": 1006,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1008,
+        "end": 1014,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1016,
+        "end": 1022,
         "className": "syntax-type"
       },
       {
         "start": 1024,
-        "end": 1025,
+        "end": 1035,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1037,
+        "end": 1043,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1056,
+        "end": 1061,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1063,
+        "end": 1073,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1075,
+        "end": 1082,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1084,
+        "end": 1097,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1099,
+        "end": 1106,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1106,
+        "end": 1107,
         "className": "syntax-operator"
       },
       {
-        "start": 1025,
-        "end": 1029,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1031,
-        "end": 1037,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1039,
-        "end": 1045,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1047,
-        "end": 1058,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1060,
-        "end": 1066,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1085,
-        "end": 1090,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1092,
-        "end": 1102,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1104,
-        "end": 1111,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1113,
-        "end": 1126,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1128,
-        "end": 1135,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1135,
-        "end": 1136,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1145,
-        "end": 1155,
+        "start": 1110,
+        "end": 1115,
         "className": "syntax-function"
       },
       {
-        "start": 1156,
-        "end": 1161,
+        "start": 1116,
+        "end": 1121,
         "className": "syntax-keyword"
       },
       {
-        "start": 1162,
-        "end": 1165,
+        "start": 1122,
+        "end": 1130,
         "className": "syntax-type"
+      },
+      {
+        "start": 1130,
+        "end": 1131,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1132,
+        "end": 1135,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1137,
+        "end": 1139,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1140,
+        "end": 1149,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1154,
+        "end": 1158,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1159,
+        "end": 1164,
+        "className": "syntax-variable"
       },
       {
         "start": 1165,
@@ -6998,66 +5711,91 @@ export const codeSnippets = [
       },
       {
         "start": 1167,
-        "end": 1170,
+        "end": 1176,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1177,
+        "end": 1180,
         "className": "syntax-variable"
       },
       {
-        "start": 1178,
-        "end": 1180,
-        "className": "syntax-operator"
+        "start": 1185,
+        "end": 1187,
+        "className": "syntax-keyword"
       },
       {
-        "start": 1181,
-        "end": 1189,
+        "start": 1190,
+        "end": 1195,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1201,
+        "end": 1207,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1208,
+        "end": 1209,
+        "className": "syntax-number"
+      },
+      {
+        "start": 1214,
+        "end": 1229,
         "className": "syntax-type"
       },
       {
-        "start": 1206,
-        "end": 1208,
-        "className": "syntax-keyword"
+        "start": 1230,
+        "end": 1238,
+        "className": "syntax-variable"
       },
       {
-        "start": 1210,
-        "end": 1214,
-        "className": "syntax-function"
+        "start": 1239,
+        "end": 1240,
+        "className": "syntax-operator"
       },
       {
-        "start": 1220,
-        "end": 1242,
-        "className": "syntax-function"
+        "start": 1241,
+        "end": 1246,
+        "className": "syntax-variable"
       },
       {
-        "start": 1270,
-        "end": 1273,
-        "className": "syntax-keyword"
+        "start": 1247,
+        "end": 1256,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1260,
+        "end": 1270,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1271,
+        "end": 1274,
+        "className": "syntax-variable"
       },
       {
         "start": 1275,
-        "end": 1279,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1280,
-        "end": 1283,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1284,
-        "end": 1285,
+        "end": 1276,
         "className": "syntax-operator"
       },
       {
-        "start": 1286,
-        "end": 1294,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1298,
-        "end": 1301,
+        "start": 1277,
+        "end": 1282,
         "className": "syntax-variable"
       },
       {
-        "start": 1303,
+        "start": 1283,
+        "end": 1290,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1296,
+        "end": 1300,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1301,
         "end": 1306,
         "className": "syntax-variable"
       },
@@ -7068,973 +5806,588 @@ export const codeSnippets = [
       },
       {
         "start": 1309,
-        "end": 1312,
+        "end": 1314,
         "className": "syntax-variable"
       },
       {
-        "start": 1312,
-        "end": 1314,
-        "className": "syntax-operator"
+        "start": 1315,
+        "end": 1330,
+        "className": "syntax-property"
       },
       {
-        "start": 1314,
-        "end": 1321,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1339,
-        "end": 1341,
+        "start": 1334,
+        "end": 1336,
         "className": "syntax-keyword"
       },
       {
-        "start": 1343,
-        "end": 1347,
+        "start": 1338,
+        "end": 1343,
         "className": "syntax-variable"
+      },
+      {
+        "start": 1344,
+        "end": 1346,
+        "className": "syntax-operator"
       },
       {
         "start": 1347,
-        "end": 1349,
-        "className": "syntax-operator"
+        "end": 1356,
+        "className": "syntax-function"
       },
       {
-        "start": 1349,
-        "end": 1365,
-        "className": "syntax-function"
+        "start": 1357,
+        "end": 1359,
+        "className": "syntax-number"
       },
       {
         "start": 1366,
-        "end": 1369,
+        "end": 1371,
         "className": "syntax-variable"
-      },
-      {
-        "start": 1371,
-        "end": 1372,
-        "className": "syntax-operator"
       },
       {
         "start": 1372,
-        "end": 1375,
-        "className": "syntax-variable"
+        "end": 1373,
+        "className": "syntax-operator"
       },
       {
-        "start": 1394,
-        "end": 1400,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1401,
-        "end": 1409,
+        "start": 1374,
+        "end": 1389,
         "className": "syntax-function"
       },
       {
-        "start": 1410,
-        "end": 1413,
+        "start": 1390,
+        "end": 1391,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1391,
+        "end": 1394,
         "className": "syntax-variable"
       },
       {
-        "start": 1428,
+        "start": 1400,
+        "end": 1402,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1403,
+        "end": 1412,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1429,
         "end": 1434,
-        "className": "syntax-keyword"
+        "className": "syntax-variable"
       },
       {
-        "start": 1435,
-        "end": 1438,
+        "start": 1448,
+        "end": 1456,
         "className": "syntax-function"
       },
       {
-        "start": 1463,
-        "end": 1474,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1475,
-        "end": 1481,
+        "start": 1457,
+        "end": 1462,
         "className": "syntax-variable"
       },
       {
-        "start": 1482,
-        "end": 1483,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1484,
-        "end": 1488,
+        "start": 1464,
+        "end": 1472,
         "className": "syntax-variable"
       },
       {
-        "start": 1488,
-        "end": 1490,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1490,
-        "end": 1505,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1506,
-        "end": 1509,
+        "start": 1474,
+        "end": 1477,
         "className": "syntax-variable"
       },
       {
-        "start": 1525,
-        "end": 1531,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1532,
-        "end": 1537,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1538,
-        "end": 1539,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1540,
-        "end": 1555,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1556,
-        "end": 1562,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1573,
-        "end": 1579,
+        "start": 1486,
+        "end": 1492,
         "className": "syntax-keyword"
       },
       {
-        "start": 1580,
-        "end": 1588,
-        "className": "syntax-function"
+        "start": 1493,
+        "end": 1494,
+        "className": "syntax-number"
       },
       {
-        "start": 1589,
-        "end": 1604,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1605,
-        "end": 1610,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1612,
-        "end": 1615,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1617,
-        "end": 1623,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1638,
-        "end": 1646,
+        "start": 1504,
+        "end": 1508,
         "className": "syntax-keyword"
       },
       {
-        "start": 1646,
-        "end": 1647,
-        "className": "syntax-operator"
+        "start": 1521,
+        "end": 1552,
+        "className": "syntax-comment"
       },
       {
-        "start": 1647,
-        "end": 1655,
-        "className": "syntax-keyword"
+        "start": 1559,
+        "end": 1620,
+        "className": "syntax-comment"
       },
       {
-        "start": 1656,
-        "end": 1660,
-        "className": "syntax-type"
+        "start": 1627,
+        "end": 1644,
+        "className": "syntax-comment"
       },
       {
-        "start": 1662,
-        "end": 1670,
-        "className": "syntax-keyword"
+        "start": 1651,
+        "end": 1711,
+        "className": "syntax-comment"
       },
       {
-        "start": 1671,
-        "end": 1677,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1679,
-        "end": 1687,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1688,
-        "end": 1694,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1707,
-        "end": 1715,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1716,
-        "end": 1727,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1729,
-        "end": 1737,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1738,
-        "end": 1744,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1757,
-        "end": 1765,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1766,
-        "end": 1771,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1773,
-        "end": 1781,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1782,
-        "end": 1792,
-        "className": "syntax-type"
+        "start": 1718,
+        "end": 1787,
+        "className": "syntax-comment"
       },
       {
         "start": 1794,
-        "end": 1802,
-        "className": "syntax-keyword"
+        "end": 1854,
+        "className": "syntax-comment"
       },
       {
-        "start": 1803,
-        "end": 1810,
+        "start": 1861,
+        "end": 1871,
         "className": "syntax-type"
       },
       {
-        "start": 1823,
-        "end": 1831,
-        "className": "syntax-keyword"
+        "start": 1872,
+        "end": 1880,
+        "className": "syntax-variable"
       },
       {
-        "start": 1832,
-        "end": 1845,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1847,
-        "end": 1855,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1856,
-        "end": 1863,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1863,
-        "end": 1864,
+        "start": 1881,
+        "end": 1882,
         "className": "syntax-operator"
       },
       {
-        "start": 1869,
-        "end": 1877,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1877,
-        "end": 1878,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1878,
+        "start": 1883,
         "end": 1886,
-        "className": "syntax-keyword"
+        "className": "syntax-variable"
       },
       {
-        "start": 1887,
-        "end": 1890,
-        "className": "syntax-type"
+        "start": 1886,
+        "end": 1888,
+        "className": "syntax-operator"
       },
       {
-        "start": 1892,
-        "end": 1900,
-        "className": "syntax-keyword"
+        "start": 1888,
+        "end": 1895,
+        "className": "syntax-function"
       },
       {
-        "start": 1902,
+        "start": 1905,
         "end": 1910,
         "className": "syntax-keyword"
       },
       {
-        "start": 1910,
-        "end": 1911,
+        "start": 1912,
+        "end": 1920,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1921,
+        "end": 1923,
         "className": "syntax-operator"
       },
       {
-        "start": 1918,
-        "end": 1922,
-        "className": "syntax-type"
+        "start": 1924,
+        "end": 1928,
+        "className": "syntax-variable"
       },
       {
-        "start": 1929,
-        "end": 1939,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1939,
-        "end": 1940,
+        "start": 1928,
+        "end": 1930,
         "className": "syntax-operator"
       },
       {
-        "start": 1940,
+        "start": 1930,
         "end": 1944,
-        "className": "syntax-type"
+        "className": "syntax-function"
+      },
+      {
+        "start": 1945,
+        "end": 1946,
+        "className": "syntax-operator"
       },
       {
         "start": 1946,
+        "end": 1949,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1951,
         "end": 1952,
-        "className": "syntax-type"
+        "className": "syntax-operator"
       },
       {
-        "start": 1954,
+        "start": 1952,
         "end": 1960,
-        "className": "syntax-type"
+        "className": "syntax-variable"
       },
       {
-        "start": 1962,
-        "end": 1973,
-        "className": "syntax-type"
+        "start": 1971,
+        "end": 1979,
+        "className": "syntax-variable"
       },
       {
-        "start": 1975,
+        "start": 1980,
         "end": 1981,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1982,
+        "end": 1990,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1990,
+        "end": 1992,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1992,
+        "end": 1999,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2015,
+        "end": 2021,
         "className": "syntax-type"
       },
       {
-        "start": 2000,
-        "end": 2005,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2007,
-        "end": 2017,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2019,
-        "end": 2026,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2028,
-        "end": 2041,
-        "className": "syntax-type"
+        "start": 2022,
+        "end": 2034,
+        "className": "syntax-variable"
       },
       {
         "start": 2043,
-        "end": 2050,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2050,
-        "end": 2051,
+        "end": 2044,
         "className": "syntax-operator"
       },
       {
-        "start": 2060,
-        "end": 2070,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2071,
-        "end": 2076,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2077,
-        "end": 2080,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2080,
-        "end": 2081,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2082,
-        "end": 2085,
+        "start": 2045,
+        "end": 2053,
         "className": "syntax-variable"
       },
       {
-        "start": 2087,
-        "end": 2092,
-        "className": "syntax-keyword"
+        "start": 2056,
+        "end": 2071,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2072,
+        "end": 2073,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2073,
+        "end": 2081,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2085,
+        "end": 2090,
+        "className": "syntax-variable"
       },
       {
         "start": 2099,
-        "end": 2101,
-        "className": "syntax-operator"
+        "end": 2119,
+        "className": "syntax-comment"
       },
       {
-        "start": 2102,
-        "end": 2116,
+        "start": 2126,
+        "end": 2135,
         "className": "syntax-type"
       },
       {
-        "start": 2133,
-        "end": 2135,
-        "className": "syntax-keyword"
+        "start": 2136,
+        "end": 2144,
+        "className": "syntax-variable"
       },
       {
-        "start": 2137,
-        "end": 2141,
-        "className": "syntax-function"
+        "start": 2145,
+        "end": 2146,
+        "className": "syntax-operator"
       },
       {
         "start": 2147,
-        "end": 2169,
-        "className": "syntax-function"
+        "end": 2148,
+        "className": "syntax-number"
       },
       {
-        "start": 2197,
-        "end": 2200,
+        "start": 2156,
+        "end": 2158,
         "className": "syntax-keyword"
       },
       {
-        "start": 2202,
-        "end": 2206,
+        "start": 2179,
+        "end": 2189,
         "className": "syntax-type"
       },
       {
-        "start": 2207,
-        "end": 2210,
+        "start": 2190,
+        "end": 2193,
         "className": "syntax-variable"
       },
       {
-        "start": 2211,
-        "end": 2212,
+        "start": 2194,
+        "end": 2195,
         "className": "syntax-operator"
       },
       {
-        "start": 2213,
-        "end": 2221,
+        "start": 2196,
+        "end": 2199,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2199,
+        "end": 2201,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2201,
+        "end": 2208,
         "className": "syntax-function"
       },
       {
-        "start": 2225,
+        "start": 2222,
+        "end": 2226,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2226,
         "end": 2228,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2230,
-        "end": 2233,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2234,
-        "end": 2235,
         "className": "syntax-operator"
       },
       {
-        "start": 2236,
-        "end": 2239,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2239,
-        "end": 2241,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2241,
-        "end": 2248,
+        "start": 2228,
+        "end": 2246,
         "className": "syntax-function"
       },
       {
-        "start": 2266,
+        "start": 2247,
+        "end": 2250,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2263,
+        "end": 2266,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2267,
         "end": 2268,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2270,
-        "end": 2274,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2274,
-        "end": 2276,
         "className": "syntax-operator"
       },
       {
-        "start": 2276,
-        "end": 2292,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2293,
-        "end": 2296,
+        "start": 2269,
+        "end": 2272,
         "className": "syntax-variable"
       },
       {
-        "start": 2298,
-        "end": 2299,
+        "start": 2284,
+        "end": 2286,
         "className": "syntax-operator"
       },
       {
-        "start": 2299,
-        "end": 2302,
+        "start": 2286,
+        "end": 2294,
         "className": "syntax-variable"
       },
       {
-        "start": 2321,
-        "end": 2327,
+        "start": 2312,
+        "end": 2317,
         "className": "syntax-keyword"
       },
       {
-        "start": 2328,
-        "end": 2342,
-        "className": "syntax-function"
+        "start": 2319,
+        "end": 2322,
+        "className": "syntax-variable"
       },
       {
-        "start": 2343,
-        "end": 2346,
+        "start": 2323,
+        "end": 2325,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2326,
+        "end": 2334,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2344,
+        "end": 2360,
         "className": "syntax-variable"
       },
       {
         "start": 2361,
-        "end": 2367,
+        "end": 2363,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2364,
+        "end": 2372,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2380,
+        "end": 2382,
         "className": "syntax-keyword"
       },
       {
-        "start": 2368,
-        "end": 2371,
-        "className": "syntax-function"
+        "start": 2384,
+        "end": 2392,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2393,
+        "end": 2395,
+        "className": "syntax-operator"
       },
       {
         "start": 2396,
-        "end": 2407,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2408,
-        "end": 2414,
+        "end": 2406,
         "className": "syntax-variable"
       },
       {
-        "start": 2415,
-        "end": 2416,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2417,
-        "end": 2421,
+        "start": 2407,
+        "end": 2412,
         "className": "syntax-variable"
-      },
-      {
-        "start": 2421,
-        "end": 2423,
-        "className": "syntax-operator"
       },
       {
         "start": 2423,
-        "end": 2438,
+        "end": 2445,
         "className": "syntax-function"
       },
       {
-        "start": 2439,
-        "end": 2442,
+        "start": 2446,
+        "end": 2451,
         "className": "syntax-variable"
       },
       {
-        "start": 2458,
-        "end": 2464,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2465,
-        "end": 2470,
+        "start": 2453,
+        "end": 2461,
         "className": "syntax-variable"
       },
       {
-        "start": 2471,
-        "end": 2472,
-        "className": "syntax-operator"
+        "start": 2463,
+        "end": 2475,
+        "className": "syntax-variable"
       },
       {
-        "start": 2473,
+        "start": 2484,
         "end": 2488,
-        "className": "syntax-function"
+        "className": "syntax-keyword"
       },
       {
         "start": 2489,
-        "end": 2495,
+        "end": 2491,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2493,
+        "end": 2505,
         "className": "syntax-variable"
       },
       {
         "start": 2506,
-        "end": 2512,
-        "className": "syntax-keyword"
+        "end": 2508,
+        "className": "syntax-operator"
       },
       {
-        "start": 2513,
-        "end": 2527,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2528,
-        "end": 2543,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2544,
-        "end": 2549,
+        "start": 2509,
+        "end": 2514,
         "className": "syntax-variable"
+      },
+      {
+        "start": 2524,
+        "end": 2534,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2535,
+        "end": 2547,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2549,
+        "end": 2550,
+        "className": "syntax-operator"
       },
       {
         "start": 2551,
-        "end": 2554,
+        "end": 2559,
         "className": "syntax-variable"
       },
       {
-        "start": 2556,
-        "end": 2562,
+        "start": 2567,
+        "end": 2575,
         "className": "syntax-variable"
       },
       {
-        "start": 2574,
-        "end": 2580,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2584,
-        "end": 2592,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2592,
-        "end": 2593,
+        "start": 2575,
+        "end": 2577,
         "className": "syntax-operator"
       },
       {
-        "start": 2593,
-        "end": 2601,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2602,
-        "end": 2606,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2608,
-        "end": 2616,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2617,
-        "end": 2623,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2625,
-        "end": 2633,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2634,
-        "end": 2640,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2653,
-        "end": 2661,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2662,
-        "end": 2673,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2675,
-        "end": 2683,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2684,
-        "end": 2690,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2703,
-        "end": 2711,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2712,
-        "end": 2717,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2719,
-        "end": 2727,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2728,
-        "end": 2738,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2740,
-        "end": 2748,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2749,
-        "end": 2756,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2769,
-        "end": 2777,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2778,
-        "end": 2791,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2793,
-        "end": 2801,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2802,
-        "end": 2809,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2809,
-        "end": 2810,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2815,
-        "end": 2819,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2824,
-        "end": 2834,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2834,
-        "end": 2835,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2835,
-        "end": 2839,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2841,
-        "end": 2847,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2849,
-        "end": 2855,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2857,
-        "end": 2868,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2870,
-        "end": 2876,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2893,
-        "end": 2898,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2900,
-        "end": 2910,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2912,
-        "end": 2919,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2921,
-        "end": 2934,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2936,
-        "end": 2943,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2943,
-        "end": 2944,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2951,
-        "end": 2956,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2957,
-        "end": 2962,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2963,
-        "end": 2971,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2971,
-        "end": 2972,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2973,
-        "end": 2976,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2978,
-        "end": 2983,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2988,
-        "end": 2990,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2991,
-        "end": 3000,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3013,
-        "end": 3017,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3018,
-        "end": 3022,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3023,
-        "end": 3024,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3025,
-        "end": 3029,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3030,
-        "end": 3033,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3042,
-        "end": 3044,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3047,
-        "end": 3051,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3052,
-        "end": 3058,
+        "start": 2577,
+        "end": 2583,
         "className": "syntax-property"
       },
       {
-        "start": 3068,
-        "end": 3074,
-        "className": "syntax-keyword"
+        "start": 2584,
+        "end": 2585,
+        "className": "syntax-operator"
       },
       {
-        "start": 3075,
-        "end": 3076,
-        "className": "syntax-number"
-      },
-      {
-        "start": 3085,
-        "end": 3087,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3104,
-        "end": 3109,
+        "start": 2586,
+        "end": 2594,
         "className": "syntax-variable"
       },
       {
-        "start": 3119,
-        "end": 3125,
+        "start": 2602,
+        "end": 2608,
         "className": "syntax-keyword"
       },
       {
-        "start": 3126,
-        "end": 3127,
-        "className": "syntax-number"
+        "start": 2609,
+        "end": 2617,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2627,
+        "end": 2634,
+        "className": "syntax-keyword"
       }
     ]
   },
   {
     "language": "cpp",
-    "name": "cpp/libstdcxx_hashtable_insert.cpp",
-    "code": "    auto\n    _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n               _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n    _M_insert_unique_node(size_type __bkt, __hash_code __code,\n                          __node_ptr __node, size_type __n_elt)\n    -> iterator\n    {\n      __rehash_guard_t __rehash_guard(_M_rehash_policy);\n      std::pair<bool, std::size_t> __do_rehash\n        = _M_rehash_policy._M_need_rehash(_M_bucket_count, _M_element_count,\n                                          __n_elt);\n\n      if (__do_rehash.first)\n        {\n          _M_rehash(__do_rehash.second, true_type{});\n          __bkt = _M_bucket_index(__code);\n        }\n\n      __rehash_guard._M_guarded_obj = nullptr;\n      _M_store_code(*__node, __code);\n\n      // Always insert at the beginning of the bucket.\n      _M_insert_bucket_begin(__bkt, __node);\n      ++_M_element_count;\n      return iterator(__node);\n    }\n\n  template<typename _Key, typename _Value, typename _Alloc,\n           typename _ExtractKey, typename _Equal,\n           typename _Hash, typename _RangeHash, typename _Unused,\n           typename _RehashPolicy, typename _Traits>\n    auto\n    _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n               _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n    _M_insert_multi_node(__node_ptr __hint,\n                         __hash_code __code, __node_ptr __node)\n    -> iterator\n    {\n      __rehash_guard_t __rehash_guard(_M_rehash_policy);\n      std::pair<bool, std::size_t> __do_rehash\n        = _M_rehash_policy._M_need_rehash(_M_bucket_count, _M_element_count, 1);\n\n      if (__do_rehash.first)\n        _M_rehash(__do_rehash.second, false_type{});\n\n      __rehash_guard._M_guarded_obj = nullptr;\n      _M_store_code(*__node, __code);\n      const key_type& __k = _ExtractKey{}(__node->_M_v());\n      size_type __bkt = _M_bucket_index(__code);\n\n      // Find the node before an equivalent one or use hint if it exists and\n      // if it is equivalent.\n      __node_base_ptr __prev\n        = __builtin_expect(__hint != nullptr, false)\n          && this->_M_equals(__k, __code, *__hint)\n            ? __hint\n            : _M_find_before_node(__bkt, __k, __code);\n\n      if (__prev)\n        {\n          // Insert after the node before the equivalent one.\n          __node->_M_nxt = __prev->_M_nxt;\n          __prev->_M_nxt = __node;\n          if (__builtin_expect(__prev == __hint, false))\n            // hint might be the last bucket node, in this case we need to\n            // update next bucket.\n            if (__node->_M_nxt\n                && !this->_M_equals(__k, __code, *__node->_M_next()))\n              {\n                size_type __next_bkt = _M_bucket_index(*__node->_M_next());\n                if (__next_bkt != __bkt)\n                  _M_buckets[__next_bkt] = __node;\n              }\n        }\n      else\n        // The inserted node has no equivalent in the hashtable. We must\n        // insert the new node at the beginning of the bucket to preserve\n        // equivalent elements' relative positions.\n        _M_insert_bucket_begin(__bkt, __node);\n      ++_M_element_count;",
+    "name": "cpp/libstdcxx_hashtable_find.cpp",
+    "code": "auto\n_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n           _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\nfind(const key_type& __k)\n-> iterator\n{ return iterator(_M_locate(__k)); }\n\ntemplate<typename _Key, typename _Value, typename _Alloc,\n       typename _ExtractKey, typename _Equal,\n       typename _Hash, typename _RangeHash, typename _Unused,\n       typename _RehashPolicy, typename _Traits>\nauto\n_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n           _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\nfind(const key_type& __k) const\n-> const_iterator\n{ return const_iterator(_M_locate(__k)); }\n\n#if __cplusplus > 201703L\ntemplate<typename _Key, typename _Value, typename _Alloc,\n       typename _ExtractKey, typename _Equal,\n       typename _Hash, typename _RangeHash, typename _Unused,\n       typename _RehashPolicy, typename _Traits>\ntemplate<typename _Kt, typename, typename>\n  auto\n  _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n             _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n  _M_find_tr(const _Kt& __k)\n  -> iterator\n  {\n    if (size() <= __small_size_threshold())\n      {\n        for (auto __n = _M_begin(); __n; __n = __n->_M_next())\n          if (this->_M_key_equals_tr(__k, *__n))\n            return iterator(__n);\n        return end();\n      }\n\n    __hash_code __code = this->_M_hash_code_tr(__k);\n    std::size_t __bkt = _M_bucket_index(__code);\n    return iterator(_M_find_node_tr(__bkt, __k, __code));\n  }\n\ntemplate<typename _Key, typename _Value, typename _Alloc,\n       typename _ExtractKey, typename _Equal,\n       typename _Hash, typename _RangeHash, typename _Unused,\n       typename _RehashPolicy, typename _Traits>\ntemplate<typename _Kt, typename, typename>\n  auto\n  _Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n             _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n  _M_find_tr(const _Kt& __k) const\n  -> const_iterator\n  {\n    if (size() <= __small_size_threshold())\n      {\n        for (auto __n = _M_begin(); __n; __n = __n->_M_next())\n          if (this->_M_key_equals_tr(__k, *__n))\n            return const_iterator(__n);\n        return end();\n      }\n\n    __hash_code __code = this->_M_hash_code_tr(__k);\n    std::size_t __bkt = _M_bucket_index(__code);\n    return const_iterator(_M_find_node_tr(__bkt, __k, __code));\n  }\n#endif\n\ntemplate<typename _Key, typename _Value, typename _Alloc,\n       typename _ExtractKey, typename _Equal,\n       typename _Hash, typename _RangeHash, typename _Unused,\n       typename _RehashPolicy, typename _Traits>\nauto\n_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n           _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\ncount(const key_type& __k) const\n-> size_type\n{\n  auto __it = find(__k);\n  if (!__it._M_cur)\n    return 0;\n\n  if (__unique_keys::value)\n    return 1;",
     "spans": [
       {
-        "start": 4,
-        "end": 8,
+        "start": 0,
+        "end": 4,
         "className": "syntax-type"
       },
       {
-        "start": 13,
-        "end": 23,
+        "start": 5,
+        "end": 15,
         "className": "syntax-type"
       },
       {
-        "start": 23,
-        "end": 24,
+        "start": 15,
+        "end": 16,
         "className": "syntax-operator"
       },
       {
-        "start": 24,
+        "start": 16,
+        "end": 20,
+        "className": "syntax-type"
+      },
+      {
+        "start": 22,
         "end": 28,
         "className": "syntax-type"
       },
@@ -8045,343 +6398,538 @@ export const codeSnippets = [
       },
       {
         "start": 38,
-        "end": 44,
+        "end": 49,
         "className": "syntax-type"
       },
       {
-        "start": 46,
+        "start": 51,
         "end": 57,
         "className": "syntax-type"
       },
       {
-        "start": 59,
-        "end": 65,
+        "start": 70,
+        "end": 75,
         "className": "syntax-type"
       },
       {
-        "start": 82,
+        "start": 77,
         "end": 87,
         "className": "syntax-type"
       },
       {
         "start": 89,
-        "end": 99,
+        "end": 96,
         "className": "syntax-type"
       },
       {
-        "start": 101,
-        "end": 108,
+        "start": 98,
+        "end": 111,
         "className": "syntax-type"
       },
       {
-        "start": 110,
-        "end": 123,
+        "start": 113,
+        "end": 120,
         "className": "syntax-type"
       },
       {
-        "start": 125,
-        "end": 132,
-        "className": "syntax-type"
-      },
-      {
-        "start": 132,
-        "end": 133,
+        "start": 120,
+        "end": 121,
         "className": "syntax-operator"
       },
       {
-        "start": 140,
+        "start": 124,
+        "end": 128,
+        "className": "syntax-function"
+      },
+      {
+        "start": 129,
+        "end": 134,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 135,
+        "end": 143,
+        "className": "syntax-type"
+      },
+      {
+        "start": 143,
+        "end": 144,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 145,
+        "end": 148,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 150,
+        "end": 152,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 153,
         "end": 161,
+        "className": "syntax-type"
+      },
+      {
+        "start": 164,
+        "end": 170,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 171,
+        "end": 179,
         "className": "syntax-function"
       },
       {
-        "start": 162,
-        "end": 171,
-        "className": "syntax-type"
+        "start": 180,
+        "end": 189,
+        "className": "syntax-function"
       },
       {
-        "start": 172,
-        "end": 177,
+        "start": 190,
+        "end": 193,
         "className": "syntax-variable"
       },
       {
-        "start": 179,
-        "end": 190,
-        "className": "syntax-type"
+        "start": 200,
+        "end": 208,
+        "className": "syntax-keyword"
       },
       {
-        "start": 191,
-        "end": 197,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 225,
-        "end": 235,
-        "className": "syntax-type"
-      },
-      {
-        "start": 236,
-        "end": 242,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 244,
-        "end": 253,
-        "className": "syntax-type"
-      },
-      {
-        "start": 254,
-        "end": 261,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 267,
-        "end": 269,
+        "start": 208,
+        "end": 209,
         "className": "syntax-operator"
       },
       {
-        "start": 270,
-        "end": 278,
+        "start": 209,
+        "end": 217,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 218,
+        "end": 222,
         "className": "syntax-type"
       },
       {
-        "start": 291,
-        "end": 307,
+        "start": 224,
+        "end": 232,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 233,
+        "end": 239,
         "className": "syntax-type"
       },
       {
-        "start": 308,
-        "end": 322,
-        "className": "syntax-function"
+        "start": 241,
+        "end": 249,
+        "className": "syntax-keyword"
       },
       {
-        "start": 323,
-        "end": 339,
+        "start": 250,
+        "end": 256,
         "className": "syntax-type"
       },
       {
-        "start": 353,
-        "end": 357,
+        "start": 265,
+        "end": 273,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 274,
+        "end": 285,
         "className": "syntax-type"
+      },
+      {
+        "start": 287,
+        "end": 295,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 296,
+        "end": 302,
+        "className": "syntax-type"
+      },
+      {
+        "start": 311,
+        "end": 319,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 320,
+        "end": 325,
+        "className": "syntax-type"
+      },
+      {
+        "start": 327,
+        "end": 335,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 336,
+        "end": 346,
+        "className": "syntax-type"
+      },
+      {
+        "start": 348,
+        "end": 356,
+        "className": "syntax-keyword"
       },
       {
         "start": 357,
-        "end": 358,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 358,
-        "end": 362,
+        "end": 364,
         "className": "syntax-type"
       },
       {
-        "start": 369,
-        "end": 375,
+        "start": 373,
+        "end": 381,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 382,
+        "end": 395,
         "className": "syntax-type"
-      },
-      {
-        "start": 375,
-        "end": 376,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 377,
-        "end": 388,
-        "className": "syntax-variable"
       },
       {
         "start": 397,
-        "end": 398,
+        "end": 405,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 406,
+        "end": 413,
+        "className": "syntax-type"
+      },
+      {
+        "start": 413,
+        "end": 414,
         "className": "syntax-operator"
       },
       {
-        "start": 399,
-        "end": 415,
-        "className": "syntax-variable"
+        "start": 415,
+        "end": 419,
+        "className": "syntax-type"
       },
       {
-        "start": 416,
+        "start": 420,
         "end": 430,
-        "className": "syntax-function"
+        "className": "syntax-type"
+      },
+      {
+        "start": 430,
+        "end": 431,
+        "className": "syntax-operator"
       },
       {
         "start": 431,
-        "end": 446,
-        "className": "syntax-variable"
+        "end": 435,
+        "className": "syntax-type"
       },
       {
-        "start": 448,
+        "start": 437,
+        "end": 443,
+        "className": "syntax-type"
+      },
+      {
+        "start": 445,
+        "end": 451,
+        "className": "syntax-type"
+      },
+      {
+        "start": 453,
         "end": 464,
-        "className": "syntax-variable"
+        "className": "syntax-type"
       },
       {
-        "start": 508,
-        "end": 515,
-        "className": "syntax-variable"
+        "start": 466,
+        "end": 472,
+        "className": "syntax-type"
       },
       {
-        "start": 525,
-        "end": 527,
-        "className": "syntax-keyword"
+        "start": 485,
+        "end": 490,
+        "className": "syntax-type"
       },
       {
-        "start": 529,
-        "end": 540,
-        "className": "syntax-variable"
+        "start": 492,
+        "end": 502,
+        "className": "syntax-type"
       },
       {
-        "start": 541,
-        "end": 546,
-        "className": "syntax-property"
+        "start": 504,
+        "end": 511,
+        "className": "syntax-type"
       },
       {
-        "start": 568,
-        "end": 577,
+        "start": 513,
+        "end": 526,
+        "className": "syntax-type"
+      },
+      {
+        "start": 528,
+        "end": 535,
+        "className": "syntax-type"
+      },
+      {
+        "start": 535,
+        "end": 536,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 539,
+        "end": 543,
         "className": "syntax-function"
       },
       {
-        "start": 578,
-        "end": 589,
+        "start": 544,
+        "end": 549,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 550,
+        "end": 558,
+        "className": "syntax-type"
+      },
+      {
+        "start": 558,
+        "end": 559,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 560,
+        "end": 563,
         "className": "syntax-variable"
       },
       {
-        "start": 590,
-        "end": 596,
-        "className": "syntax-property"
+        "start": 565,
+        "end": 570,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 571,
+        "end": 573,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 574,
+        "end": 588,
+        "className": "syntax-type"
+      },
+      {
+        "start": 591,
+        "end": 597,
+        "className": "syntax-keyword"
       },
       {
         "start": 598,
-        "end": 607,
+        "end": 612,
+        "className": "syntax-function"
+      },
+      {
+        "start": 613,
+        "end": 622,
+        "className": "syntax-function"
+      },
+      {
+        "start": 623,
+        "end": 626,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 633,
+        "end": 636,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 637,
+        "end": 648,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 649,
+        "end": 650,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 651,
+        "end": 658,
+        "className": "syntax-number"
+      },
+      {
+        "start": 659,
+        "end": 667,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 667,
+        "end": 668,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 668,
+        "end": 676,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 677,
+        "end": 681,
         "className": "syntax-type"
       },
       {
-        "start": 622,
-        "end": 627,
-        "className": "syntax-variable"
+        "start": 683,
+        "end": 691,
+        "className": "syntax-keyword"
       },
       {
-        "start": 628,
-        "end": 629,
-        "className": "syntax-operator"
+        "start": 692,
+        "end": 698,
+        "className": "syntax-type"
       },
       {
-        "start": 630,
-        "end": 645,
-        "className": "syntax-function"
+        "start": 700,
+        "end": 708,
+        "className": "syntax-keyword"
       },
       {
-        "start": 646,
-        "end": 652,
-        "className": "syntax-variable"
+        "start": 709,
+        "end": 715,
+        "className": "syntax-type"
       },
       {
-        "start": 672,
-        "end": 686,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 687,
-        "end": 701,
-        "className": "syntax-property"
-      },
-      {
-        "start": 702,
-        "end": 703,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 704,
-        "end": 711,
-        "className": "syntax-constant"
-      },
-      {
-        "start": 719,
+        "start": 724,
         "end": 732,
-        "className": "syntax-function"
+        "className": "syntax-keyword"
       },
       {
         "start": 733,
-        "end": 734,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 734,
-        "end": 740,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 742,
-        "end": 748,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 758,
-        "end": 806,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 813,
-        "end": 835,
-        "className": "syntax-function"
-      },
-      {
-        "start": 836,
-        "end": 841,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 843,
-        "end": 849,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 858,
-        "end": 860,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 860,
-        "end": 876,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 884,
-        "end": 890,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 891,
-        "end": 899,
-        "className": "syntax-function"
-      },
-      {
-        "start": 900,
-        "end": 906,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 918,
-        "end": 926,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 926,
-        "end": 927,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 927,
-        "end": 935,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 936,
-        "end": 940,
+        "end": 744,
         "className": "syntax-type"
       },
       {
-        "start": 942,
-        "end": 950,
+        "start": 746,
+        "end": 754,
         "className": "syntax-keyword"
+      },
+      {
+        "start": 755,
+        "end": 761,
+        "className": "syntax-type"
+      },
+      {
+        "start": 770,
+        "end": 778,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 779,
+        "end": 784,
+        "className": "syntax-type"
+      },
+      {
+        "start": 786,
+        "end": 794,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 795,
+        "end": 805,
+        "className": "syntax-type"
+      },
+      {
+        "start": 807,
+        "end": 815,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 816,
+        "end": 823,
+        "className": "syntax-type"
+      },
+      {
+        "start": 832,
+        "end": 840,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 841,
+        "end": 854,
+        "className": "syntax-type"
+      },
+      {
+        "start": 856,
+        "end": 864,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 865,
+        "end": 872,
+        "className": "syntax-type"
+      },
+      {
+        "start": 872,
+        "end": 873,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 874,
+        "end": 882,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 882,
+        "end": 883,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 883,
+        "end": 891,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 892,
+        "end": 895,
+        "className": "syntax-type"
+      },
+      {
+        "start": 897,
+        "end": 905,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 907,
+        "end": 915,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 915,
+        "end": 916,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 919,
+        "end": 923,
+        "className": "syntax-type"
+      },
+      {
+        "start": 926,
+        "end": 936,
+        "className": "syntax-type"
+      },
+      {
+        "start": 936,
+        "end": 937,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 937,
+        "end": 941,
+        "className": "syntax-type"
+      },
+      {
+        "start": 943,
+        "end": 949,
+        "className": "syntax-type"
       },
       {
         "start": 951,
@@ -8390,98 +6938,108 @@ export const codeSnippets = [
       },
       {
         "start": 959,
-        "end": 967,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 968,
-        "end": 974,
+        "end": 970,
         "className": "syntax-type"
       },
       {
-        "start": 987,
-        "end": 995,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 996,
-        "end": 1007,
+        "start": 972,
+        "end": 978,
         "className": "syntax-type"
       },
       {
-        "start": 1009,
-        "end": 1017,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1018,
-        "end": 1024,
+        "start": 993,
+        "end": 998,
         "className": "syntax-type"
       },
       {
-        "start": 1037,
-        "end": 1045,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1046,
-        "end": 1051,
+        "start": 1000,
+        "end": 1010,
         "className": "syntax-type"
       },
       {
-        "start": 1053,
-        "end": 1061,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1062,
-        "end": 1072,
+        "start": 1012,
+        "end": 1019,
         "className": "syntax-type"
       },
       {
-        "start": 1074,
-        "end": 1082,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1083,
-        "end": 1090,
+        "start": 1021,
+        "end": 1034,
         "className": "syntax-type"
       },
       {
-        "start": 1103,
-        "end": 1111,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1112,
-        "end": 1125,
+        "start": 1036,
+        "end": 1043,
         "className": "syntax-type"
       },
       {
-        "start": 1127,
-        "end": 1135,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1136,
-        "end": 1143,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1143,
-        "end": 1144,
+        "start": 1043,
+        "end": 1044,
         "className": "syntax-operator"
       },
       {
-        "start": 1149,
-        "end": 1153,
+        "start": 1049,
+        "end": 1059,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1060,
+        "end": 1065,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1066,
+        "end": 1069,
         "className": "syntax-type"
       },
       {
-        "start": 1158,
-        "end": 1168,
+        "start": 1069,
+        "end": 1070,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1071,
+        "end": 1074,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1078,
+        "end": 1080,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1081,
+        "end": 1089,
         "className": "syntax-type"
+      },
+      {
+        "start": 1098,
+        "end": 1100,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1102,
+        "end": 1106,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1112,
+        "end": 1134,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1154,
+        "end": 1157,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1159,
+        "end": 1163,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1164,
+        "end": 1167,
+        "className": "syntax-variable"
       },
       {
         "start": 1168,
@@ -8489,469 +7047,1991 @@ export const codeSnippets = [
         "className": "syntax-operator"
       },
       {
-        "start": 1169,
-        "end": 1173,
-        "className": "syntax-type"
+        "start": 1170,
+        "end": 1178,
+        "className": "syntax-function"
       },
       {
-        "start": 1175,
-        "end": 1181,
-        "className": "syntax-type"
+        "start": 1182,
+        "end": 1185,
+        "className": "syntax-variable"
       },
       {
-        "start": 1183,
-        "end": 1189,
-        "className": "syntax-type"
+        "start": 1187,
+        "end": 1190,
+        "className": "syntax-variable"
       },
       {
         "start": 1191,
-        "end": 1202,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1204,
-        "end": 1210,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1227,
-        "end": 1232,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1234,
-        "end": 1244,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1246,
-        "end": 1253,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1255,
-        "end": 1268,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1270,
-        "end": 1277,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1277,
-        "end": 1278,
+        "end": 1192,
         "className": "syntax-operator"
       },
       {
-        "start": 1285,
-        "end": 1305,
+        "start": 1193,
+        "end": 1196,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1196,
+        "end": 1198,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1198,
+        "end": 1205,
         "className": "syntax-function"
       },
       {
-        "start": 1306,
-        "end": 1316,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1317,
-        "end": 1323,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1350,
-        "end": 1361,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1362,
-        "end": 1368,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1370,
-        "end": 1380,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1381,
-        "end": 1387,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1393,
-        "end": 1395,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1396,
-        "end": 1404,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1417,
-        "end": 1433,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1434,
-        "end": 1448,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1449,
-        "end": 1465,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1479,
-        "end": 1483,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1483,
-        "end": 1484,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1484,
-        "end": 1488,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1495,
-        "end": 1501,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1501,
-        "end": 1502,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1503,
-        "end": 1514,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1523,
-        "end": 1524,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1525,
-        "end": 1541,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1542,
-        "end": 1556,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1557,
-        "end": 1572,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1574,
-        "end": 1590,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1592,
-        "end": 1593,
-        "className": "syntax-number"
-      },
-      {
-        "start": 1603,
-        "end": 1605,
+        "start": 1219,
+        "end": 1221,
         "className": "syntax-keyword"
       },
       {
-        "start": 1607,
-        "end": 1618,
+        "start": 1223,
+        "end": 1227,
         "className": "syntax-variable"
       },
       {
-        "start": 1619,
-        "end": 1624,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1634,
-        "end": 1643,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1644,
-        "end": 1655,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1656,
-        "end": 1662,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1664,
-        "end": 1674,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1686,
-        "end": 1700,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1701,
-        "end": 1715,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1716,
-        "end": 1717,
+        "start": 1227,
+        "end": 1229,
         "className": "syntax-operator"
       },
       {
-        "start": 1718,
-        "end": 1725,
-        "className": "syntax-constant"
-      },
-      {
-        "start": 1733,
-        "end": 1746,
+        "start": 1229,
+        "end": 1245,
         "className": "syntax-function"
       },
       {
-        "start": 1747,
-        "end": 1748,
+        "start": 1246,
+        "end": 1249,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1251,
+        "end": 1252,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1252,
+        "end": 1255,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1270,
+        "end": 1276,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1277,
+        "end": 1285,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1286,
+        "end": 1289,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1300,
+        "end": 1306,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1307,
+        "end": 1310,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1327,
+        "end": 1338,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1339,
+        "end": 1345,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1346,
+        "end": 1347,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1348,
+        "end": 1352,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1352,
+        "end": 1354,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1354,
+        "end": 1369,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1370,
+        "end": 1373,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1385,
+        "end": 1391,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1392,
+        "end": 1397,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1398,
+        "end": 1399,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1400,
+        "end": 1415,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1416,
+        "end": 1422,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1429,
+        "end": 1435,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1436,
+        "end": 1444,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1445,
+        "end": 1460,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1461,
+        "end": 1466,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1468,
+        "end": 1471,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1473,
+        "end": 1479,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1488,
+        "end": 1496,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1496,
+        "end": 1497,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1497,
+        "end": 1505,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1506,
+        "end": 1510,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1512,
+        "end": 1520,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1521,
+        "end": 1527,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1529,
+        "end": 1537,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1538,
+        "end": 1544,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1553,
+        "end": 1561,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1562,
+        "end": 1573,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1575,
+        "end": 1583,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1584,
+        "end": 1590,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1599,
+        "end": 1607,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1608,
+        "end": 1613,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1615,
+        "end": 1623,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1624,
+        "end": 1634,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1636,
+        "end": 1644,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1645,
+        "end": 1652,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1661,
+        "end": 1669,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1670,
+        "end": 1683,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1685,
+        "end": 1693,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1694,
+        "end": 1701,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1701,
+        "end": 1702,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1703,
+        "end": 1711,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1711,
+        "end": 1712,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1712,
+        "end": 1720,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1721,
+        "end": 1724,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1726,
+        "end": 1734,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1736,
+        "end": 1744,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1744,
+        "end": 1745,
         "className": "syntax-operator"
       },
       {
         "start": 1748,
-        "end": 1754,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1756,
-        "end": 1762,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1771,
-        "end": 1776,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1777,
-        "end": 1785,
+        "end": 1752,
         "className": "syntax-type"
       },
       {
-        "start": 1785,
+        "start": 1755,
+        "end": 1765,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1765,
+        "end": 1766,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1766,
+        "end": 1770,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1772,
+        "end": 1778,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1780,
         "end": 1786,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1787,
-        "end": 1790,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1791,
-        "end": 1792,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1793,
-        "end": 1804,
         "className": "syntax-type"
       },
       {
-        "start": 1807,
-        "end": 1813,
-        "className": "syntax-variable"
+        "start": 1788,
+        "end": 1799,
+        "className": "syntax-type"
       },
       {
-        "start": 1813,
-        "end": 1815,
-        "className": "syntax-operator"
+        "start": 1801,
+        "end": 1807,
+        "className": "syntax-type"
       },
       {
-        "start": 1815,
-        "end": 1819,
-        "className": "syntax-function"
+        "start": 1822,
+        "end": 1827,
+        "className": "syntax-type"
       },
       {
-        "start": 1830,
+        "start": 1829,
         "end": 1839,
         "className": "syntax-type"
       },
       {
-        "start": 1840,
-        "end": 1845,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1846,
-        "end": 1847,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1848,
-        "end": 1863,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1864,
-        "end": 1870,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1880,
-        "end": 1950,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1957,
-        "end": 1980,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1987,
-        "end": 2002,
+        "start": 1841,
+        "end": 1848,
         "className": "syntax-type"
       },
       {
-        "start": 2003,
-        "end": 2009,
-        "className": "syntax-variable"
+        "start": 1850,
+        "end": 1863,
+        "className": "syntax-type"
       },
       {
-        "start": 2018,
-        "end": 2019,
+        "start": 1865,
+        "end": 1872,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1872,
+        "end": 1873,
         "className": "syntax-operator"
       },
       {
-        "start": 2020,
-        "end": 2036,
+        "start": 1878,
+        "end": 1888,
         "className": "syntax-function"
+      },
+      {
+        "start": 1889,
+        "end": 1894,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1895,
+        "end": 1898,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1898,
+        "end": 1899,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1900,
+        "end": 1903,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1905,
+        "end": 1910,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1913,
+        "end": 1915,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1916,
+        "end": 1930,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1939,
+        "end": 1941,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1943,
+        "end": 1947,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1953,
+        "end": 1975,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1995,
+        "end": 1998,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2000,
+        "end": 2004,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2005,
+        "end": 2008,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2009,
+        "end": 2010,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2011,
+        "end": 2019,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2023,
+        "end": 2026,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2028,
+        "end": 2031,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2032,
+        "end": 2033,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2034,
+        "end": 2037,
+        "className": "syntax-variable"
       },
       {
         "start": 2037,
-        "end": 2043,
-        "className": "syntax-variable"
+        "end": 2039,
+        "className": "syntax-operator"
       },
       {
-        "start": 2044,
+        "start": 2039,
         "end": 2046,
-        "className": "syntax-operator"
+        "className": "syntax-function"
       },
       {
-        "start": 2047,
-        "end": 2054,
-        "className": "syntax-constant"
+        "start": 2060,
+        "end": 2062,
+        "className": "syntax-keyword"
       },
       {
-        "start": 2073,
-        "end": 2075,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2076,
-        "end": 2080,
+        "start": 2064,
+        "end": 2068,
         "className": "syntax-variable"
       },
       {
-        "start": 2080,
-        "end": 2082,
+        "start": 2068,
+        "end": 2070,
         "className": "syntax-operator"
       },
       {
-        "start": 2082,
-        "end": 2091,
+        "start": 2070,
+        "end": 2086,
         "className": "syntax-function"
+      },
+      {
+        "start": 2087,
+        "end": 2090,
+        "className": "syntax-variable"
       },
       {
         "start": 2092,
-        "end": 2095,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2097,
-        "end": 2103,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2105,
-        "end": 2106,
+        "end": 2093,
         "className": "syntax-operator"
       },
       {
-        "start": 2106,
-        "end": 2112,
+        "start": 2093,
+        "end": 2096,
         "className": "syntax-variable"
       },
       {
-        "start": 2128,
-        "end": 2134,
-        "className": "syntax-variable"
+        "start": 2111,
+        "end": 2117,
+        "className": "syntax-keyword"
       },
       {
-        "start": 2149,
-        "end": 2168,
+        "start": 2118,
+        "end": 2132,
         "className": "syntax-function"
       },
       {
-        "start": 2169,
+        "start": 2133,
+        "end": 2136,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2147,
+        "end": 2153,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2154,
+        "end": 2157,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2174,
+        "end": 2185,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2186,
+        "end": 2192,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2193,
+        "end": 2194,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2195,
+        "end": 2199,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2199,
+        "end": 2201,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2201,
+        "end": 2216,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2217,
+        "end": 2220,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2232,
+        "end": 2238,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2239,
+        "end": 2244,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2245,
+        "end": 2246,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2247,
+        "end": 2262,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2263,
+        "end": 2269,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2276,
+        "end": 2282,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2283,
+        "end": 2297,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2298,
+        "end": 2313,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2314,
+        "end": 2319,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2321,
+        "end": 2324,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2326,
+        "end": 2332,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2340,
+        "end": 2346,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2348,
+        "end": 2356,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2356,
+        "end": 2357,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2357,
+        "end": 2365,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2366,
+        "end": 2370,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2372,
+        "end": 2380,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2381,
+        "end": 2387,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2389,
+        "end": 2397,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2398,
+        "end": 2404,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2413,
+        "end": 2421,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2422,
+        "end": 2433,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2435,
+        "end": 2443,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2444,
+        "end": 2450,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2459,
+        "end": 2467,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2468,
+        "end": 2473,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2475,
+        "end": 2483,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2484,
+        "end": 2494,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2496,
+        "end": 2504,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2505,
+        "end": 2512,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2521,
+        "end": 2529,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2530,
+        "end": 2543,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2545,
+        "end": 2553,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2554,
+        "end": 2561,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2561,
+        "end": 2562,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2563,
+        "end": 2567,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2568,
+        "end": 2578,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2578,
+        "end": 2579,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2579,
+        "end": 2583,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2585,
+        "end": 2591,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2593,
+        "end": 2599,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2601,
+        "end": 2612,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2614,
+        "end": 2620,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2633,
+        "end": 2638,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2640,
+        "end": 2650,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2652,
+        "end": 2659,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2661,
+        "end": 2674,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2676,
+        "end": 2683,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2683,
+        "end": 2684,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2687,
+        "end": 2692,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2693,
+        "end": 2698,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2699,
+        "end": 2707,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2707,
+        "end": 2708,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2709,
+        "end": 2712,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2714,
+        "end": 2719,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2720,
+        "end": 2722,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2723,
+        "end": 2732,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2737,
+        "end": 2741,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2742,
+        "end": 2746,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2747,
+        "end": 2748,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2749,
+        "end": 2753,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2754,
+        "end": 2757,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2762,
+        "end": 2764,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2767,
+        "end": 2771,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2772,
+        "end": 2778,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2784,
+        "end": 2790,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2791,
+        "end": 2792,
+        "className": "syntax-number"
+      },
+      {
+        "start": 2797,
+        "end": 2799,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2816,
+        "end": 2821,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2827,
+        "end": 2833,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2834,
+        "end": 2835,
+        "className": "syntax-number"
+      }
+    ]
+  },
+  {
+    "language": "cpp",
+    "name": "cpp/libstdcxx_hashtable_insert.cpp",
+    "code": "auto\n_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n           _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n_M_insert_unique_node(size_type __bkt, __hash_code __code,\n                      __node_ptr __node, size_type __n_elt)\n-> iterator\n{\n  __rehash_guard_t __rehash_guard(_M_rehash_policy);\n  std::pair<bool, std::size_t> __do_rehash\n    = _M_rehash_policy._M_need_rehash(_M_bucket_count, _M_element_count,\n                                      __n_elt);\n\n  if (__do_rehash.first)\n    {\n      _M_rehash(__do_rehash.second, true_type{});\n      __bkt = _M_bucket_index(__code);\n    }\n\n  __rehash_guard._M_guarded_obj = nullptr;\n  _M_store_code(*__node, __code);\n\n  // Always insert at the beginning of the bucket.\n  _M_insert_bucket_begin(__bkt, __node);\n  ++_M_element_count;\n  return iterator(__node);\n}\n\ntemplate<typename _Key, typename _Value, typename _Alloc,\n       typename _ExtractKey, typename _Equal,\n       typename _Hash, typename _RangeHash, typename _Unused,\n       typename _RehashPolicy, typename _Traits>\nauto\n_Hashtable<_Key, _Value, _Alloc, _ExtractKey, _Equal,\n           _Hash, _RangeHash, _Unused, _RehashPolicy, _Traits>::\n_M_insert_multi_node(__node_ptr __hint,\n                     __hash_code __code, __node_ptr __node)\n-> iterator\n{\n  __rehash_guard_t __rehash_guard(_M_rehash_policy);\n  std::pair<bool, std::size_t> __do_rehash\n    = _M_rehash_policy._M_need_rehash(_M_bucket_count, _M_element_count, 1);\n\n  if (__do_rehash.first)\n    _M_rehash(__do_rehash.second, false_type{});\n\n  __rehash_guard._M_guarded_obj = nullptr;\n  _M_store_code(*__node, __code);\n  const key_type& __k = _ExtractKey{}(__node->_M_v());\n  size_type __bkt = _M_bucket_index(__code);\n\n  // Find the node before an equivalent one or use hint if it exists and\n  // if it is equivalent.\n  __node_base_ptr __prev\n    = __builtin_expect(__hint != nullptr, false)\n      && this->_M_equals(__k, __code, *__hint)\n        ? __hint\n        : _M_find_before_node(__bkt, __k, __code);\n\n  if (__prev)\n    {\n      // Insert after the node before the equivalent one.\n      __node->_M_nxt = __prev->_M_nxt;\n      __prev->_M_nxt = __node;\n      if (__builtin_expect(__prev == __hint, false))\n        // hint might be the last bucket node, in this case we need to\n        // update next bucket.\n        if (__node->_M_nxt\n            && !this->_M_equals(__k, __code, *__node->_M_next()))\n          {\n            size_type __next_bkt = _M_bucket_index(*__node->_M_next());\n            if (__next_bkt != __bkt)\n              _M_buckets[__next_bkt] = __node;\n          }\n    }\n  else\n    // The inserted node has no equivalent in the hashtable. We must\n    // insert the new node at the beginning of the bucket to preserve\n    // equivalent elements' relative positions.\n    _M_insert_bucket_begin(__bkt, __node);\n  ++_M_element_count;",
+    "spans": [
+      {
+        "start": 0,
+        "end": 4,
+        "className": "syntax-type"
+      },
+      {
+        "start": 5,
+        "end": 15,
+        "className": "syntax-type"
+      },
+      {
+        "start": 15,
+        "end": 16,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 16,
+        "end": 20,
+        "className": "syntax-type"
+      },
+      {
+        "start": 22,
+        "end": 28,
+        "className": "syntax-type"
+      },
+      {
+        "start": 30,
+        "end": 36,
+        "className": "syntax-type"
+      },
+      {
+        "start": 38,
+        "end": 49,
+        "className": "syntax-type"
+      },
+      {
+        "start": 51,
+        "end": 57,
+        "className": "syntax-type"
+      },
+      {
+        "start": 70,
+        "end": 75,
+        "className": "syntax-type"
+      },
+      {
+        "start": 77,
+        "end": 87,
+        "className": "syntax-type"
+      },
+      {
+        "start": 89,
+        "end": 96,
+        "className": "syntax-type"
+      },
+      {
+        "start": 98,
+        "end": 111,
+        "className": "syntax-type"
+      },
+      {
+        "start": 113,
+        "end": 120,
+        "className": "syntax-type"
+      },
+      {
+        "start": 120,
+        "end": 121,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 124,
+        "end": 145,
+        "className": "syntax-function"
+      },
+      {
+        "start": 146,
+        "end": 155,
+        "className": "syntax-type"
+      },
+      {
+        "start": 156,
+        "end": 161,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 163,
+        "end": 174,
+        "className": "syntax-type"
+      },
+      {
+        "start": 175,
+        "end": 181,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 205,
+        "end": 215,
+        "className": "syntax-type"
+      },
+      {
+        "start": 216,
+        "end": 222,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 224,
+        "end": 233,
+        "className": "syntax-type"
+      },
+      {
+        "start": 234,
+        "end": 241,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 243,
+        "end": 245,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 246,
+        "end": 254,
+        "className": "syntax-type"
+      },
+      {
+        "start": 259,
+        "end": 275,
+        "className": "syntax-type"
+      },
+      {
+        "start": 276,
+        "end": 290,
+        "className": "syntax-function"
+      },
+      {
+        "start": 291,
+        "end": 307,
+        "className": "syntax-type"
+      },
+      {
+        "start": 317,
+        "end": 321,
+        "className": "syntax-type"
+      },
+      {
+        "start": 321,
+        "end": 322,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 322,
+        "end": 326,
+        "className": "syntax-type"
+      },
+      {
+        "start": 333,
+        "end": 339,
+        "className": "syntax-type"
+      },
+      {
+        "start": 339,
+        "end": 340,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 341,
+        "end": 352,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 357,
+        "end": 358,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 359,
+        "end": 375,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 376,
+        "end": 390,
+        "className": "syntax-function"
+      },
+      {
+        "start": 391,
+        "end": 406,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 408,
+        "end": 424,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 464,
+        "end": 471,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 477,
+        "end": 479,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 481,
+        "end": 492,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 493,
+        "end": 498,
+        "className": "syntax-property"
+      },
+      {
+        "start": 512,
+        "end": 521,
+        "className": "syntax-function"
+      },
+      {
+        "start": 522,
+        "end": 533,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 534,
+        "end": 540,
+        "className": "syntax-property"
+      },
+      {
+        "start": 542,
+        "end": 551,
+        "className": "syntax-type"
+      },
+      {
+        "start": 562,
+        "end": 567,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 568,
+        "end": 569,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 570,
+        "end": 585,
+        "className": "syntax-function"
+      },
+      {
+        "start": 586,
+        "end": 592,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 604,
+        "end": 618,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 619,
+        "end": 633,
+        "className": "syntax-property"
+      },
+      {
+        "start": 634,
+        "end": 635,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 636,
+        "end": 643,
+        "className": "syntax-constant"
+      },
+      {
+        "start": 647,
+        "end": 660,
+        "className": "syntax-function"
+      },
+      {
+        "start": 661,
+        "end": 662,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 662,
+        "end": 668,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 670,
+        "end": 676,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 682,
+        "end": 730,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 733,
+        "end": 755,
+        "className": "syntax-function"
+      },
+      {
+        "start": 756,
+        "end": 761,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 763,
+        "end": 769,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 774,
+        "end": 776,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 776,
+        "end": 792,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 796,
+        "end": 802,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 803,
+        "end": 811,
+        "className": "syntax-function"
+      },
+      {
+        "start": 812,
+        "end": 818,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 824,
+        "end": 832,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 832,
+        "end": 833,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 833,
+        "end": 841,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 842,
+        "end": 846,
+        "className": "syntax-type"
+      },
+      {
+        "start": 848,
+        "end": 856,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 857,
+        "end": 863,
+        "className": "syntax-type"
+      },
+      {
+        "start": 865,
+        "end": 873,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 874,
+        "end": 880,
+        "className": "syntax-type"
+      },
+      {
+        "start": 889,
+        "end": 897,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 898,
+        "end": 909,
+        "className": "syntax-type"
+      },
+      {
+        "start": 911,
+        "end": 919,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 920,
+        "end": 926,
+        "className": "syntax-type"
+      },
+      {
+        "start": 935,
+        "end": 943,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 944,
+        "end": 949,
+        "className": "syntax-type"
+      },
+      {
+        "start": 951,
+        "end": 959,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 960,
+        "end": 970,
+        "className": "syntax-type"
+      },
+      {
+        "start": 972,
+        "end": 980,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 981,
+        "end": 988,
+        "className": "syntax-type"
+      },
+      {
+        "start": 997,
+        "end": 1005,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1006,
+        "end": 1019,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1021,
+        "end": 1029,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1030,
+        "end": 1037,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1037,
+        "end": 1038,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1039,
+        "end": 1043,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1044,
+        "end": 1054,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1054,
+        "end": 1055,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1055,
+        "end": 1059,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1061,
+        "end": 1067,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1069,
+        "end": 1075,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1077,
+        "end": 1088,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1090,
+        "end": 1096,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1109,
+        "end": 1114,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1116,
+        "end": 1126,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1128,
+        "end": 1135,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1137,
+        "end": 1150,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1152,
+        "end": 1159,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1159,
+        "end": 1160,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1163,
+        "end": 1183,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1184,
+        "end": 1194,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1195,
+        "end": 1201,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1224,
+        "end": 1235,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1236,
+        "end": 1242,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1244,
+        "end": 1254,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1255,
+        "end": 1261,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1263,
+        "end": 1265,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1266,
+        "end": 1274,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1279,
+        "end": 1295,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1296,
+        "end": 1310,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1311,
+        "end": 1327,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1337,
+        "end": 1341,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1341,
+        "end": 1342,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1342,
+        "end": 1346,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1353,
+        "end": 1359,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1359,
+        "end": 1360,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1361,
+        "end": 1372,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1377,
+        "end": 1378,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1379,
+        "end": 1395,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1396,
+        "end": 1410,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1411,
+        "end": 1426,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1428,
+        "end": 1444,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1446,
+        "end": 1447,
+        "className": "syntax-number"
+      },
+      {
+        "start": 1453,
+        "end": 1455,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1457,
+        "end": 1468,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1469,
+        "end": 1474,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1480,
+        "end": 1489,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1490,
+        "end": 1501,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1502,
+        "end": 1508,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1510,
+        "end": 1520,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1528,
+        "end": 1542,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1543,
+        "end": 1557,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1558,
+        "end": 1559,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1560,
+        "end": 1567,
+        "className": "syntax-constant"
+      },
+      {
+        "start": 1571,
+        "end": 1584,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1585,
+        "end": 1586,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1586,
+        "end": 1592,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1594,
+        "end": 1600,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1605,
+        "end": 1610,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1611,
+        "end": 1619,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1619,
+        "end": 1620,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1621,
+        "end": 1624,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1625,
+        "end": 1626,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1627,
+        "end": 1638,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1641,
+        "end": 1647,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1647,
+        "end": 1649,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1649,
+        "end": 1653,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1660,
+        "end": 1669,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1670,
+        "end": 1675,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1676,
+        "end": 1677,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1678,
+        "end": 1693,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1694,
+        "end": 1700,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1706,
+        "end": 1776,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 1779,
+        "end": 1802,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 1805,
+        "end": 1820,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1821,
+        "end": 1827,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1832,
+        "end": 1833,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1834,
+        "end": 1850,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1851,
+        "end": 1857,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1858,
+        "end": 1860,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1861,
+        "end": 1868,
+        "className": "syntax-constant"
+      },
+      {
+        "start": 1883,
+        "end": 1885,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1886,
+        "end": 1890,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1890,
+        "end": 1892,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1892,
+        "end": 1901,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1902,
+        "end": 1905,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1907,
+        "end": 1913,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1915,
+        "end": 1916,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1916,
+        "end": 1922,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1934,
+        "end": 1940,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1951,
+        "end": 1970,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1971,
+        "end": 1976,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1978,
+        "end": 1981,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1983,
+        "end": 1989,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1995,
+        "end": 1997,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1999,
+        "end": 2005,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2019,
+        "end": 2070,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2077,
+        "end": 2083,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2083,
+        "end": 2085,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2085,
+        "end": 2091,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2092,
+        "end": 2093,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2094,
+        "end": 2100,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2100,
+        "end": 2102,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2102,
+        "end": 2108,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2116,
+        "end": 2122,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2122,
+        "end": 2124,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2124,
+        "end": 2130,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2131,
+        "end": 2132,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2133,
+        "end": 2139,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2147,
+        "end": 2149,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2151,
+        "end": 2167,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2168,
         "end": 2174,
         "className": "syntax-variable"
       },
       {
-        "start": 2176,
-        "end": 2179,
+        "start": 2175,
+        "end": 2177,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2178,
+        "end": 2184,
         "className": "syntax-variable"
       },
       {
-        "start": 2181,
-        "end": 2187,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2197,
-        "end": 2199,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2201,
-        "end": 2207,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2229,
-        "end": 2280,
+        "start": 2202,
+        "end": 2264,
         "className": "syntax-comment"
       },
       {
-        "start": 2291,
-        "end": 2297,
-        "className": "syntax-variable"
+        "start": 2273,
+        "end": 2295,
+        "className": "syntax-comment"
       },
       {
-        "start": 2297,
-        "end": 2299,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2299,
-        "end": 2305,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2306,
-        "end": 2307,
-        "className": "syntax-operator"
+        "start": 2304,
+        "end": 2306,
+        "className": "syntax-keyword"
       },
       {
         "start": 2308,
@@ -8969,209 +9049,164 @@ export const codeSnippets = [
         "className": "syntax-property"
       },
       {
-        "start": 2334,
-        "end": 2340,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2340,
-        "end": 2342,
+        "start": 2335,
+        "end": 2337,
         "className": "syntax-operator"
       },
       {
-        "start": 2342,
-        "end": 2348,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2349,
-        "end": 2350,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2351,
-        "end": 2357,
+        "start": 2339,
+        "end": 2343,
         "className": "syntax-variable"
       },
       {
-        "start": 2369,
-        "end": 2371,
-        "className": "syntax-keyword"
+        "start": 2343,
+        "end": 2345,
+        "className": "syntax-operator"
       },
       {
-        "start": 2373,
-        "end": 2389,
+        "start": 2345,
+        "end": 2354,
         "className": "syntax-function"
       },
       {
-        "start": 2390,
-        "end": 2396,
+        "start": 2355,
+        "end": 2358,
         "className": "syntax-variable"
       },
       {
-        "start": 2397,
-        "end": 2399,
+        "start": 2360,
+        "end": 2366,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2368,
+        "end": 2369,
         "className": "syntax-operator"
       },
       {
-        "start": 2400,
-        "end": 2406,
+        "start": 2369,
+        "end": 2375,
         "className": "syntax-variable"
       },
       {
-        "start": 2428,
-        "end": 2490,
-        "className": "syntax-comment"
+        "start": 2375,
+        "end": 2377,
+        "className": "syntax-operator"
       },
       {
-        "start": 2503,
-        "end": 2525,
-        "className": "syntax-comment"
+        "start": 2377,
+        "end": 2384,
+        "className": "syntax-function"
       },
       {
-        "start": 2538,
-        "end": 2540,
+        "start": 2413,
+        "end": 2422,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2423,
+        "end": 2433,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2434,
+        "end": 2435,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2436,
+        "end": 2451,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2452,
+        "end": 2453,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2453,
+        "end": 2459,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2459,
+        "end": 2461,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2461,
+        "end": 2468,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2485,
+        "end": 2487,
         "className": "syntax-keyword"
       },
       {
-        "start": 2542,
-        "end": 2548,
+        "start": 2489,
+        "end": 2499,
         "className": "syntax-variable"
       },
       {
-        "start": 2548,
-        "end": 2550,
+        "start": 2500,
+        "end": 2502,
         "className": "syntax-operator"
       },
       {
-        "start": 2550,
-        "end": 2556,
-        "className": "syntax-property"
+        "start": 2503,
+        "end": 2508,
+        "className": "syntax-variable"
       },
       {
-        "start": 2573,
-        "end": 2575,
+        "start": 2524,
+        "end": 2534,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2535,
+        "end": 2545,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2547,
+        "end": 2548,
         "className": "syntax-operator"
+      },
+      {
+        "start": 2549,
+        "end": 2555,
+        "className": "syntax-variable"
       },
       {
         "start": 2577,
         "end": 2581,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2581,
-        "end": 2583,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2583,
-        "end": 2592,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2593,
-        "end": 2596,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2598,
-        "end": 2604,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2606,
-        "end": 2607,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2607,
-        "end": 2613,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2613,
-        "end": 2615,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2615,
-        "end": 2622,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2659,
-        "end": 2668,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2669,
-        "end": 2679,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2680,
-        "end": 2681,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2682,
-        "end": 2697,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2698,
-        "end": 2699,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2699,
-        "end": 2705,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2705,
-        "end": 2707,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2707,
-        "end": 2714,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2735,
-        "end": 2737,
         "className": "syntax-keyword"
       },
       {
-        "start": 2739,
-        "end": 2749,
+        "start": 2586,
+        "end": 2650,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2655,
+        "end": 2720,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2725,
+        "end": 2768,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2773,
+        "end": 2795,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2796,
+        "end": 2801,
         "className": "syntax-variable"
-      },
-      {
-        "start": 2750,
-        "end": 2752,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2753,
-        "end": 2758,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2778,
-        "end": 2788,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2789,
-        "end": 2799,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2801,
-        "end": 2802,
-        "className": "syntax-operator"
       },
       {
         "start": 2803,
@@ -9179,48 +9214,13 @@ export const codeSnippets = [
         "className": "syntax-variable"
       },
       {
-        "start": 2843,
-        "end": 2847,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2856,
-        "end": 2920,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2929,
-        "end": 2994,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 3003,
-        "end": 3046,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 3055,
-        "end": 3077,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3078,
-        "end": 3083,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3085,
-        "end": 3091,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3100,
-        "end": 3102,
+        "start": 2814,
+        "end": 2816,
         "className": "syntax-operator"
       },
       {
-        "start": 3102,
-        "end": 3118,
+        "start": 2816,
+        "end": 2832,
         "className": "syntax-variable"
       }
     ]
@@ -9228,230 +9228,1147 @@ export const codeSnippets = [
   {
     "language": "cpp",
     "name": "cpp/libstdcxx_heap_adjust_pop.cpp",
-    "code": "  template<typename _RandomAccessIterator, typename _Distance,\n           typename _Tp, typename _Compare>\n    _GLIBCXX20_CONSTEXPR\n    void\n    __adjust_heap(_RandomAccessIterator __first, _Distance __holeIndex,\n                  _Distance __len, _Tp __value, _Compare __comp)\n    {\n      const _Distance __topIndex = __holeIndex;\n      _Distance __secondChild = __holeIndex;\n      while (__secondChild < (__len - 1) / 2)\n        {\n          __secondChild = 2 * (__secondChild + 1);\n          if (__comp(__first + __secondChild,\n                     __first + (__secondChild - 1)))\n            __secondChild--;\n          *(__first + __holeIndex) = _GLIBCXX_MOVE(*(__first + __secondChild));\n          __holeIndex = __secondChild;\n        }\n      if ((__len & 1) == 0 && __secondChild == (__len - 2) / 2)\n        {\n          __secondChild = 2 * (__secondChild + 1);\n          *(__first + __holeIndex) = _GLIBCXX_MOVE(*(__first\n                                                     + (__secondChild - 1)));\n          __holeIndex = __secondChild - 1;\n        }\n      __decltype(__gnu_cxx::__ops::__iter_comp_val(_GLIBCXX_MOVE(__comp)))\n        __cmp(_GLIBCXX_MOVE(__comp));\n      std::__push_heap(__first, __holeIndex, __topIndex,\n                       _GLIBCXX_MOVE(__value), __cmp);\n    }\n\n  template<typename _RandomAccessIterator, typename _Compare>\n    _GLIBCXX20_CONSTEXPR\n    inline void\n    __pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last,\n               _RandomAccessIterator __result, _Compare& __comp)\n    {\n      typedef typename iterator_traits<_RandomAccessIterator>::value_type\n        _ValueType;\n      typedef typename iterator_traits<_RandomAccessIterator>::difference_type\n        _DistanceType;\n\n      _ValueType __value = _GLIBCXX_MOVE(*__result);\n      *__result = _GLIBCXX_MOVE(*__first);\n      std::__adjust_heap(__first, _DistanceType(0),\n                         _DistanceType(__last - __first),\n                         _GLIBCXX_MOVE(__value), __comp);\n    }",
+    "code": "template<typename _RandomAccessIterator, typename _Distance,\n         typename _Tp, typename _Compare>\n  _GLIBCXX20_CONSTEXPR\n  void\n  __adjust_heap(_RandomAccessIterator __first, _Distance __holeIndex,\n                _Distance __len, _Tp __value, _Compare __comp)\n  {\n    const _Distance __topIndex = __holeIndex;\n    _Distance __secondChild = __holeIndex;\n    while (__secondChild < (__len - 1) / 2)\n      {\n        __secondChild = 2 * (__secondChild + 1);\n        if (__comp(__first + __secondChild,\n                   __first + (__secondChild - 1)))\n          __secondChild--;\n        *(__first + __holeIndex) = _GLIBCXX_MOVE(*(__first + __secondChild));\n        __holeIndex = __secondChild;\n      }\n    if ((__len & 1) == 0 && __secondChild == (__len - 2) / 2)\n      {\n        __secondChild = 2 * (__secondChild + 1);\n        *(__first + __holeIndex) = _GLIBCXX_MOVE(*(__first\n                                                   + (__secondChild - 1)));\n        __holeIndex = __secondChild - 1;\n      }\n    __decltype(__gnu_cxx::__ops::__iter_comp_val(_GLIBCXX_MOVE(__comp)))\n      __cmp(_GLIBCXX_MOVE(__comp));\n    std::__push_heap(__first, __holeIndex, __topIndex,\n                     _GLIBCXX_MOVE(__value), __cmp);\n  }\n\ntemplate<typename _RandomAccessIterator, typename _Compare>\n  _GLIBCXX20_CONSTEXPR\n  inline void\n  __pop_heap(_RandomAccessIterator __first, _RandomAccessIterator __last,\n             _RandomAccessIterator __result, _Compare& __comp)\n  {\n    typedef typename iterator_traits<_RandomAccessIterator>::value_type\n      _ValueType;\n    typedef typename iterator_traits<_RandomAccessIterator>::difference_type\n      _DistanceType;\n\n    _ValueType __value = _GLIBCXX_MOVE(*__result);\n    *__result = _GLIBCXX_MOVE(*__first);\n    std::__adjust_heap(__first, _DistanceType(0),\n                       _DistanceType(__last - __first),\n                       _GLIBCXX_MOVE(__value), __comp);\n  }",
     "spans": [
       {
-        "start": 2,
-        "end": 10,
+        "start": 0,
+        "end": 8,
         "className": "syntax-keyword"
       },
       {
-        "start": 10,
-        "end": 11,
+        "start": 8,
+        "end": 9,
         "className": "syntax-operator"
       },
       {
-        "start": 11,
-        "end": 19,
+        "start": 9,
+        "end": 17,
         "className": "syntax-keyword"
       },
       {
-        "start": 20,
-        "end": 41,
+        "start": 18,
+        "end": 39,
         "className": "syntax-type"
       },
       {
-        "start": 43,
-        "end": 51,
+        "start": 41,
+        "end": 49,
         "className": "syntax-keyword"
       },
       {
-        "start": 52,
-        "end": 61,
+        "start": 50,
+        "end": 59,
         "className": "syntax-type"
       },
       {
-        "start": 74,
+        "start": 70,
+        "end": 78,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 79,
         "end": 82,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 83,
-        "end": 86,
         "className": "syntax-type"
       },
       {
-        "start": 88,
-        "end": 96,
+        "start": 84,
+        "end": 92,
         "className": "syntax-keyword"
       },
       {
-        "start": 97,
-        "end": 105,
+        "start": 93,
+        "end": 101,
         "className": "syntax-type"
+      },
+      {
+        "start": 101,
+        "end": 102,
+        "className": "syntax-operator"
       },
       {
         "start": 105,
-        "end": 106,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 111,
-        "end": 131,
+        "end": 125,
         "className": "syntax-type"
       },
       {
-        "start": 136,
-        "end": 140,
+        "start": 128,
+        "end": 132,
         "className": "syntax-variable"
       },
       {
-        "start": 145,
-        "end": 158,
+        "start": 135,
+        "end": 148,
         "className": "syntax-function"
       },
       {
-        "start": 159,
-        "end": 180,
+        "start": 149,
+        "end": 170,
         "className": "syntax-type"
       },
       {
-        "start": 181,
-        "end": 188,
+        "start": 171,
+        "end": 178,
         "className": "syntax-variable"
+      },
+      {
+        "start": 180,
+        "end": 189,
+        "className": "syntax-type"
       },
       {
         "start": 190,
-        "end": 199,
-        "className": "syntax-type"
-      },
-      {
-        "start": 200,
-        "end": 211,
+        "end": 201,
         "className": "syntax-variable"
       },
       {
-        "start": 231,
-        "end": 240,
+        "start": 219,
+        "end": 228,
         "className": "syntax-type"
       },
       {
-        "start": 241,
-        "end": 246,
+        "start": 229,
+        "end": 234,
         "className": "syntax-variable"
       },
       {
-        "start": 248,
-        "end": 251,
+        "start": 236,
+        "end": 239,
         "className": "syntax-type"
       },
       {
-        "start": 252,
-        "end": 259,
+        "start": 240,
+        "end": 247,
         "className": "syntax-variable"
       },
       {
-        "start": 261,
-        "end": 269,
+        "start": 249,
+        "end": 257,
         "className": "syntax-type"
       },
       {
-        "start": 270,
-        "end": 276,
+        "start": 258,
+        "end": 264,
         "className": "syntax-variable"
+      },
+      {
+        "start": 274,
+        "end": 279,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 280,
+        "end": 289,
+        "className": "syntax-type"
       },
       {
         "start": 290,
-        "end": 295,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 296,
-        "end": 305,
-        "className": "syntax-type"
-      },
-      {
-        "start": 306,
-        "end": 316,
+        "end": 300,
         "className": "syntax-variable"
       },
       {
-        "start": 317,
-        "end": 318,
+        "start": 301,
+        "end": 302,
         "className": "syntax-operator"
       },
       {
-        "start": 319,
+        "start": 303,
+        "end": 314,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 320,
+        "end": 329,
+        "className": "syntax-type"
+      },
+      {
+        "start": 330,
+        "end": 343,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 344,
+        "end": 345,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 346,
+        "end": 357,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 363,
+        "end": 368,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 370,
+        "end": 383,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 384,
+        "end": 385,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 387,
+        "end": 392,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 393,
+        "end": 394,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 395,
+        "end": 396,
+        "className": "syntax-number"
+      },
+      {
+        "start": 400,
+        "end": 401,
+        "className": "syntax-number"
+      },
+      {
+        "start": 419,
+        "end": 432,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 433,
+        "end": 434,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 435,
+        "end": 436,
+        "className": "syntax-number"
+      },
+      {
+        "start": 437,
+        "end": 438,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 440,
+        "end": 453,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 454,
+        "end": 455,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 456,
+        "end": 457,
+        "className": "syntax-number"
+      },
+      {
+        "start": 468,
+        "end": 470,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 472,
+        "end": 478,
+        "className": "syntax-function"
+      },
+      {
+        "start": 479,
+        "end": 486,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 487,
+        "end": 488,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 489,
+        "end": 502,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 523,
+        "end": 530,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 531,
+        "end": 532,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 534,
+        "end": 547,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 548,
+        "end": 549,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 550,
+        "end": 551,
+        "className": "syntax-number"
+      },
+      {
+        "start": 565,
+        "end": 578,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 578,
+        "end": 580,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 590,
+        "end": 591,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 592,
+        "end": 599,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 600,
+        "end": 601,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 602,
+        "end": 613,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 615,
+        "end": 616,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 617,
+        "end": 630,
+        "className": "syntax-function"
+      },
+      {
+        "start": 631,
+        "end": 632,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 633,
+        "end": 640,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 641,
+        "end": 642,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 643,
+        "end": 656,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 668,
+        "end": 679,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 680,
+        "end": 681,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 682,
+        "end": 695,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 709,
+        "end": 711,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 714,
+        "end": 719,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 720,
+        "end": 721,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 722,
+        "end": 723,
+        "className": "syntax-number"
+      },
+      {
+        "start": 725,
+        "end": 727,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 728,
+        "end": 729,
+        "className": "syntax-number"
+      },
+      {
+        "start": 730,
+        "end": 732,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 733,
+        "end": 746,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 747,
+        "end": 749,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 751,
+        "end": 756,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 757,
+        "end": 758,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 759,
+        "end": 760,
+        "className": "syntax-number"
+      },
+      {
+        "start": 764,
+        "end": 765,
+        "className": "syntax-number"
+      },
+      {
+        "start": 783,
+        "end": 796,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 797,
+        "end": 798,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 799,
+        "end": 800,
+        "className": "syntax-number"
+      },
+      {
+        "start": 801,
+        "end": 802,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 804,
+        "end": 817,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 818,
+        "end": 819,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 820,
+        "end": 821,
+        "className": "syntax-number"
+      },
+      {
+        "start": 832,
+        "end": 833,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 834,
+        "end": 841,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 842,
+        "end": 843,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 844,
+        "end": 855,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 857,
+        "end": 858,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 859,
+        "end": 872,
+        "className": "syntax-function"
+      },
+      {
+        "start": 873,
+        "end": 874,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 875,
+        "end": 882,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 934,
+        "end": 935,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 937,
+        "end": 950,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 951,
+        "end": 952,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 953,
+        "end": 954,
+        "className": "syntax-number"
+      },
+      {
+        "start": 967,
+        "end": 978,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 979,
+        "end": 980,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 981,
+        "end": 994,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 995,
+        "end": 996,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 997,
+        "end": 998,
+        "className": "syntax-number"
+      },
+      {
+        "start": 1012,
+        "end": 1022,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1041,
+        "end": 1056,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1057,
+        "end": 1070,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1071,
+        "end": 1077,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1087,
+        "end": 1092,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1093,
+        "end": 1106,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1107,
+        "end": 1113,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1126,
+        "end": 1137,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1138,
+        "end": 1145,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1147,
+        "end": 1158,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1160,
+        "end": 1170,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1193,
+        "end": 1206,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1207,
+        "end": 1214,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1217,
+        "end": 1222,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1230,
+        "end": 1238,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1238,
+        "end": 1239,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1239,
+        "end": 1247,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1248,
+        "end": 1269,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1271,
+        "end": 1279,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1280,
+        "end": 1288,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1288,
+        "end": 1289,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1292,
+        "end": 1312,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1315,
+        "end": 1321,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1322,
+        "end": 1326,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1329,
+        "end": 1339,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1340,
+        "end": 1361,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1362,
+        "end": 1369,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1371,
+        "end": 1392,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1393,
+        "end": 1399,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1414,
+        "end": 1435,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1436,
+        "end": 1444,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1446,
+        "end": 1454,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1454,
+        "end": 1455,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1456,
+        "end": 1462,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1472,
+        "end": 1479,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1480,
+        "end": 1488,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1489,
+        "end": 1504,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1504,
+        "end": 1505,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1505,
+        "end": 1526,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1526,
+        "end": 1527,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1529,
+        "end": 1539,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1546,
+        "end": 1556,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1562,
+        "end": 1569,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1570,
+        "end": 1578,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1579,
+        "end": 1594,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1594,
+        "end": 1595,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1595,
+        "end": 1616,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1616,
+        "end": 1617,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1619,
+        "end": 1634,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1641,
+        "end": 1654,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1661,
+        "end": 1671,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1672,
+        "end": 1679,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1680,
+        "end": 1681,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1682,
+        "end": 1695,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1696,
+        "end": 1697,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1697,
+        "end": 1705,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1712,
+        "end": 1713,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1713,
+        "end": 1721,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1722,
+        "end": 1723,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1724,
+        "end": 1737,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1738,
+        "end": 1739,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1739,
+        "end": 1746,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1758,
+        "end": 1771,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1772,
+        "end": 1779,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1781,
+        "end": 1794,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1795,
+        "end": 1796,
+        "className": "syntax-number"
+      },
+      {
+        "start": 1822,
+        "end": 1835,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1836,
+        "end": 1842,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1843,
+        "end": 1844,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1845,
+        "end": 1852,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1878,
+        "end": 1891,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1892,
+        "end": 1899,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1902,
+        "end": 1908,
+        "className": "syntax-variable"
+      }
+    ]
+  },
+  {
+    "language": "cpp",
+    "name": "cpp/libstdcxx_heap_make.cpp",
+    "code": "template<typename _RandomAccessIterator, typename _Compare>\n  _GLIBCXX20_CONSTEXPR\n  void\n  __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last,\n              _Compare& __comp)\n  {\n    typedef typename iterator_traits<_RandomAccessIterator>::value_type\n        _ValueType;\n    typedef typename iterator_traits<_RandomAccessIterator>::difference_type\n        _DistanceType;\n\n    if (__last - __first < 2)\n      return;\n\n    const _DistanceType __len = __last - __first;\n    _DistanceType __parent = (__len - 2) / 2;\n    while (true)\n      {\n        _ValueType __value = _GLIBCXX_MOVE(*(__first + __parent));\n        std::__adjust_heap(__first, __parent, __len, _GLIBCXX_MOVE(__value),\n                           __comp);\n        if (__parent == 0)\n          return;\n        __parent--;\n      }\n  }",
+    "spans": [
+      {
+        "start": 0,
+        "end": 8,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 8,
+        "end": 9,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 9,
+        "end": 17,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 18,
+        "end": 39,
+        "className": "syntax-type"
+      },
+      {
+        "start": 41,
+        "end": 49,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 50,
+        "end": 58,
+        "className": "syntax-type"
+      },
+      {
+        "start": 58,
+        "end": 59,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 62,
+        "end": 82,
+        "className": "syntax-type"
+      },
+      {
+        "start": 85,
+        "end": 89,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 92,
+        "end": 103,
+        "className": "syntax-function"
+      },
+      {
+        "start": 104,
+        "end": 125,
+        "className": "syntax-type"
+      },
+      {
+        "start": 126,
+        "end": 133,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 135,
+        "end": 156,
+        "className": "syntax-type"
+      },
+      {
+        "start": 157,
+        "end": 163,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 179,
+        "end": 187,
+        "className": "syntax-type"
+      },
+      {
+        "start": 187,
+        "end": 188,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 189,
+        "end": 195,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 205,
+        "end": 212,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 213,
+        "end": 221,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 222,
+        "end": 237,
+        "className": "syntax-type"
+      },
+      {
+        "start": 237,
+        "end": 238,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 238,
+        "end": 259,
+        "className": "syntax-type"
+      },
+      {
+        "start": 259,
+        "end": 260,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 262,
+        "end": 272,
+        "className": "syntax-type"
+      },
+      {
+        "start": 281,
+        "end": 291,
+        "className": "syntax-type"
+      },
+      {
+        "start": 297,
+        "end": 304,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 305,
+        "end": 313,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 314,
+        "end": 329,
+        "className": "syntax-type"
+      },
+      {
+        "start": 329,
         "end": 330,
-        "className": "syntax-variable"
+        "className": "syntax-operator"
       },
       {
-        "start": 338,
-        "end": 347,
+        "start": 330,
+        "end": 351,
         "className": "syntax-type"
       },
       {
-        "start": 348,
-        "end": 361,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 362,
-        "end": 363,
+        "start": 351,
+        "end": 352,
         "className": "syntax-operator"
       },
       {
-        "start": 364,
-        "end": 375,
-        "className": "syntax-variable"
+        "start": 354,
+        "end": 369,
+        "className": "syntax-type"
       },
       {
-        "start": 383,
-        "end": 388,
+        "start": 378,
+        "end": 391,
+        "className": "syntax-type"
+      },
+      {
+        "start": 398,
+        "end": 400,
         "className": "syntax-keyword"
       },
       {
-        "start": 390,
-        "end": 403,
+        "start": 402,
+        "end": 408,
         "className": "syntax-variable"
       },
       {
-        "start": 404,
-        "end": 405,
+        "start": 409,
+        "end": 410,
         "className": "syntax-operator"
       },
       {
-        "start": 407,
-        "end": 412,
+        "start": 411,
+        "end": 418,
         "className": "syntax-variable"
       },
       {
-        "start": 413,
-        "end": 414,
+        "start": 419,
+        "end": 420,
         "className": "syntax-operator"
       },
       {
-        "start": 415,
-        "end": 416,
+        "start": 421,
+        "end": 422,
         "className": "syntax-number"
       },
       {
-        "start": 420,
-        "end": 421,
-        "className": "syntax-number"
+        "start": 430,
+        "end": 436,
+        "className": "syntax-keyword"
       },
       {
         "start": 443,
-        "end": 456,
+        "end": 448,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 449,
+        "end": 462,
+        "className": "syntax-type"
+      },
+      {
+        "start": 463,
+        "end": 468,
         "className": "syntax-variable"
       },
       {
-        "start": 457,
-        "end": 458,
+        "start": 469,
+        "end": 470,
         "className": "syntax-operator"
       },
       {
-        "start": 459,
-        "end": 460,
-        "className": "syntax-number"
-      },
-      {
-        "start": 461,
-        "end": 462,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 464,
+        "start": 471,
         "end": 477,
         "className": "syntax-variable"
       },
@@ -9462,838 +10379,403 @@ export const codeSnippets = [
       },
       {
         "start": 480,
-        "end": 481,
+        "end": 487,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 493,
+        "end": 506,
+        "className": "syntax-type"
+      },
+      {
+        "start": 507,
+        "end": 515,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 516,
+        "end": 517,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 519,
+        "end": 524,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 525,
+        "end": 526,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 527,
+        "end": 528,
         "className": "syntax-number"
       },
       {
-        "start": 494,
-        "end": 496,
+        "start": 532,
+        "end": 533,
+        "className": "syntax-number"
+      },
+      {
+        "start": 539,
+        "end": 544,
         "className": "syntax-keyword"
       },
       {
-        "start": 498,
-        "end": 504,
+        "start": 568,
+        "end": 578,
+        "className": "syntax-type"
+      },
+      {
+        "start": 579,
+        "end": 586,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 587,
+        "end": 588,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 589,
+        "end": 602,
         "className": "syntax-function"
       },
       {
-        "start": 505,
-        "end": 512,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 513,
-        "end": 514,
+        "start": 603,
+        "end": 604,
         "className": "syntax-operator"
       },
       {
-        "start": 515,
-        "end": 528,
+        "start": 605,
+        "end": 612,
         "className": "syntax-variable"
       },
       {
-        "start": 551,
-        "end": 558,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 559,
-        "end": 560,
+        "start": 613,
+        "end": 614,
         "className": "syntax-operator"
       },
       {
-        "start": 562,
-        "end": 575,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 576,
-        "end": 577,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 578,
-        "end": 579,
-        "className": "syntax-number"
-      },
-      {
-        "start": 595,
-        "end": 608,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 608,
-        "end": 610,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 622,
+        "start": 615,
         "end": 623,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 624,
-        "end": 631,
         "className": "syntax-variable"
       },
       {
-        "start": 632,
-        "end": 633,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 634,
-        "end": 645,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 647,
-        "end": 648,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 649,
-        "end": 662,
+        "start": 640,
+        "end": 653,
         "className": "syntax-function"
+      },
+      {
+        "start": 654,
+        "end": 661,
+        "className": "syntax-variable"
       },
       {
         "start": 663,
-        "end": 664,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 665,
-        "end": 672,
+        "end": 671,
         "className": "syntax-variable"
       },
       {
         "start": 673,
-        "end": 674,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 675,
-        "end": 688,
+        "end": 678,
         "className": "syntax-variable"
       },
       {
-        "start": 702,
-        "end": 713,
+        "start": 680,
+        "end": 693,
+        "className": "syntax-function"
+      },
+      {
+        "start": 694,
+        "end": 701,
         "className": "syntax-variable"
       },
       {
-        "start": 714,
-        "end": 715,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 716,
-        "end": 729,
+        "start": 731,
+        "end": 737,
         "className": "syntax-variable"
       },
       {
-        "start": 747,
-        "end": 749,
+        "start": 748,
+        "end": 750,
         "className": "syntax-keyword"
       },
       {
         "start": 752,
-        "end": 757,
+        "end": 760,
         "className": "syntax-variable"
       },
       {
-        "start": 758,
-        "end": 759,
+        "start": 761,
+        "end": 763,
         "className": "syntax-operator"
       },
       {
-        "start": 760,
-        "end": 761,
-        "className": "syntax-number"
-      },
-      {
-        "start": 763,
+        "start": 764,
         "end": 765,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 766,
-        "end": 767,
         "className": "syntax-number"
       },
       {
-        "start": 768,
-        "end": 770,
-        "className": "syntax-operator"
+        "start": 777,
+        "end": 783,
+        "className": "syntax-keyword"
       },
       {
-        "start": 771,
-        "end": 784,
+        "start": 793,
+        "end": 801,
         "className": "syntax-variable"
       },
       {
-        "start": 785,
-        "end": 787,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 789,
-        "end": 794,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 795,
-        "end": 796,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 797,
-        "end": 798,
-        "className": "syntax-number"
-      },
-      {
-        "start": 802,
+        "start": 801,
         "end": 803,
-        "className": "syntax-number"
-      },
-      {
-        "start": 825,
-        "end": 838,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 839,
-        "end": 840,
         "className": "syntax-operator"
-      },
-      {
-        "start": 841,
-        "end": 842,
-        "className": "syntax-number"
-      },
-      {
-        "start": 843,
-        "end": 844,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 846,
-        "end": 859,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 860,
-        "end": 861,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 862,
-        "end": 863,
-        "className": "syntax-number"
-      },
-      {
-        "start": 876,
-        "end": 877,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 878,
-        "end": 885,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 886,
-        "end": 887,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 888,
-        "end": 899,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 901,
-        "end": 902,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 903,
-        "end": 916,
-        "className": "syntax-function"
-      },
-      {
-        "start": 917,
-        "end": 918,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 919,
-        "end": 926,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 980,
-        "end": 981,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 983,
-        "end": 996,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 997,
-        "end": 998,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 999,
-        "end": 1000,
-        "className": "syntax-number"
-      },
-      {
-        "start": 1015,
-        "end": 1026,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1027,
-        "end": 1028,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1029,
-        "end": 1042,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1043,
-        "end": 1044,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1045,
-        "end": 1046,
-        "className": "syntax-number"
-      },
-      {
-        "start": 1064,
-        "end": 1074,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1093,
-        "end": 1108,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1109,
-        "end": 1122,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1123,
-        "end": 1129,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1141,
-        "end": 1146,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1147,
-        "end": 1160,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1161,
-        "end": 1167,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1182,
-        "end": 1193,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1194,
-        "end": 1201,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1203,
-        "end": 1214,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1216,
-        "end": 1226,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1251,
-        "end": 1264,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1265,
-        "end": 1272,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1275,
-        "end": 1280,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1292,
-        "end": 1300,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1300,
-        "end": 1301,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1301,
-        "end": 1309,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1310,
-        "end": 1331,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1333,
-        "end": 1341,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1342,
-        "end": 1350,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1350,
-        "end": 1351,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1356,
-        "end": 1376,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1381,
-        "end": 1387,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1388,
-        "end": 1392,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1397,
-        "end": 1407,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1408,
-        "end": 1429,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1430,
-        "end": 1437,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1439,
-        "end": 1460,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1461,
-        "end": 1467,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1484,
-        "end": 1505,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1506,
-        "end": 1514,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1516,
-        "end": 1524,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1524,
-        "end": 1525,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1526,
-        "end": 1532,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1546,
-        "end": 1553,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1554,
-        "end": 1562,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1563,
-        "end": 1578,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1578,
-        "end": 1579,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1579,
-        "end": 1600,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1600,
-        "end": 1601,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1603,
-        "end": 1613,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1622,
-        "end": 1632,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1640,
-        "end": 1647,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1648,
-        "end": 1656,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1657,
-        "end": 1672,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1672,
-        "end": 1673,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1673,
-        "end": 1694,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1694,
-        "end": 1695,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1697,
-        "end": 1712,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1721,
-        "end": 1734,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1743,
-        "end": 1753,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1754,
-        "end": 1761,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1762,
-        "end": 1763,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1764,
-        "end": 1777,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1778,
-        "end": 1779,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1779,
-        "end": 1787,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1796,
-        "end": 1797,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1797,
-        "end": 1805,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1806,
-        "end": 1807,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1808,
-        "end": 1821,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1822,
-        "end": 1823,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1823,
-        "end": 1830,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1844,
-        "end": 1857,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1858,
-        "end": 1865,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1867,
-        "end": 1880,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1881,
-        "end": 1882,
-        "className": "syntax-number"
-      },
-      {
-        "start": 1910,
-        "end": 1923,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1924,
-        "end": 1930,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1931,
-        "end": 1932,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1933,
-        "end": 1940,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1968,
-        "end": 1981,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1982,
-        "end": 1989,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1992,
-        "end": 1998,
-        "className": "syntax-variable"
       }
     ]
   },
   {
     "language": "cpp",
-    "name": "cpp/libstdcxx_heap_make.cpp",
-    "code": "  template<typename _RandomAccessIterator, typename _Compare>\n    _GLIBCXX20_CONSTEXPR\n    void\n    __make_heap(_RandomAccessIterator __first, _RandomAccessIterator __last,\n                _Compare& __comp)\n    {\n      typedef typename iterator_traits<_RandomAccessIterator>::value_type\n          _ValueType;\n      typedef typename iterator_traits<_RandomAccessIterator>::difference_type\n          _DistanceType;\n\n      if (__last - __first < 2)\n        return;\n\n      const _DistanceType __len = __last - __first;\n      _DistanceType __parent = (__len - 2) / 2;\n      while (true)\n        {\n          _ValueType __value = _GLIBCXX_MOVE(*(__first + __parent));\n          std::__adjust_heap(__first, __parent, __len, _GLIBCXX_MOVE(__value),\n                             __comp);\n          if (__parent == 0)\n            return;\n          __parent--;\n        }\n    }",
+    "name": "cpp/libstdcxx_tree_bounds.cpp",
+    "code": "typename _Compare, typename _Alloc>\nvoid\n_Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::\n_M_erase(_Node_ptr __x)\n{\n// Erase without rebalancing.\nwhile (__x)\n{\n_M_erase(_S_right(__x));\n_Node_ptr __y = _S_left(__x);\n_M_drop_node(__x);\n__x = __y;\n}\n}\n\ntemplate<typename _Key, typename _Val, typename _KeyOfValue,\ntypename _Compare, typename _Alloc>\ntypename _Rb_tree<_Key, _Val, _KeyOfValue,\n           _Compare, _Alloc>::_Base_ptr\n_Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::\n_M_lower_bound(_Base_ptr __x, _Base_ptr __y,\n        const _Key& __k) const\n{\nwhile (__x)\nif (!_M_impl._M_key_compare(_S_key(__x), __k))\n__y = __x, __x = _S_left(__x);\nelse\n__x = _S_right(__x);\nreturn __y;\n}\n\ntemplate<typename _Key, typename _Val, typename _KeyOfValue,\ntypename _Compare, typename _Alloc>\ntypename _Rb_tree<_Key, _Val, _KeyOfValue,\n           _Compare, _Alloc>::_Base_ptr\n_Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::\n_M_upper_bound(_Base_ptr __x, _Base_ptr __y,\n        const _Key& __k) const\n{\nwhile (__x)\nif (_M_impl._M_key_compare(__k, _S_key(__x)))\n__y = __x, __x = _S_left(__x);\nelse\n__x = _S_right(__x);\nreturn __y;\n}\n\ntemplate<typename _Key, typename _Val, typename _KeyOfValue,\ntypename _Compare, typename _Alloc>\npair<typename _Rb_tree<_Key, _Val, _KeyOfValue,\n                _Compare, _Alloc>::iterator,\ntypename _Rb_tree<_Key, _Val, _KeyOfValue,\n                _Compare, _Alloc>::iterator>\n_Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::\nequal_range(const _Key& __k)\n{\ntypedef pair<iterator, iterator> _Ret;\n\n_Base_ptr __x = _M_begin();\n_Base_ptr __y = _M_end();\nwhile (__x)\n{\nif (_M_impl._M_key_compare(_S_key(__x), __k))\n __x = _S_right(__x);\nelse if (_M_impl._M_key_compare(__k, _S_key(__x)))\n __y = __x, __x = _S_left(__x);\nelse\n {\n   _Base_ptr __xu(__x);\n   _Base_ptr __yu(__y);\n   __y = __x, __x = _S_left(__x);\n   __xu = _S_right(__xu);\n   return _Ret(iterator(_M_lower_bound(__x, __y, __k)),\n               iterator(_M_upper_bound(__xu, __yu, __k)));\n }\n}\nreturn _Ret(iterator(__y), iterator(__y));\n}\n\ntemplate<typename _Key, typename _Val, typename _KeyOfValue,\ntypename _Compare, typename _Alloc>\npair<typename _Rb_tree<_Key, _Val, _KeyOfValue,\n                _Compare, _Alloc>::const_iterator,\ntypename _Rb_tree<_Key, _Val, _KeyOfValue,\n                _Compare, _Alloc>::const_iterator>\n_Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::\nequal_range(const _Key& __k) const\n{\ntypedef pair<const_iterator, const_iterator> _Ret;\n\n_Base_ptr __x = _M_begin();\n_Base_ptr __y = _M_end();\nwhile (__x)\n{\nif (_M_impl._M_key_compare(_S_key(__x), __k))\n __x = _S_right(__x);\nelse if (_M_impl._M_key_compare(__k, _S_key(__x)))\n __y = __x, __x = _S_left(__x);\nelse\n {\n   _Base_ptr __xu(__x);\n   _Base_ptr __yu(__y);\n   __y = __x, __x = _S_left(__x);\n   __xu = _S_right(__xu);\n   return _Ret(const_iterator(_M_lower_bound(__x, __y, __k)),\n               const_iterator(_M_upper_bound(__xu, __yu, __k)));\n }\n}\nreturn _Ret(const_iterator(__y), const_iterator(__y));",
     "spans": [
       {
-        "start": 2,
-        "end": 10,
+        "start": 0,
+        "end": 8,
         "className": "syntax-keyword"
       },
       {
-        "start": 10,
-        "end": 11,
-        "className": "syntax-operator"
+        "start": 9,
+        "end": 17,
+        "className": "syntax-variable"
       },
       {
-        "start": 11,
-        "end": 19,
+        "start": 19,
+        "end": 27,
         "className": "syntax-keyword"
       },
       {
-        "start": 20,
-        "end": 41,
+        "start": 28,
+        "end": 34,
         "className": "syntax-type"
       },
       {
-        "start": 43,
-        "end": 51,
-        "className": "syntax-keyword"
+        "start": 34,
+        "end": 35,
+        "className": "syntax-operator"
       },
       {
-        "start": 52,
+        "start": 36,
+        "end": 40,
+        "className": "syntax-type"
+      },
+      {
+        "start": 41,
+        "end": 49,
+        "className": "syntax-type"
+      },
+      {
+        "start": 49,
+        "end": 50,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 50,
+        "end": 54,
+        "className": "syntax-type"
+      },
+      {
+        "start": 56,
         "end": 60,
         "className": "syntax-type"
       },
       {
-        "start": 60,
-        "end": 61,
-        "className": "syntax-operator"
+        "start": 62,
+        "end": 73,
+        "className": "syntax-type"
       },
       {
-        "start": 66,
-        "end": 86,
+        "start": 75,
+        "end": 83,
+        "className": "syntax-type"
+      },
+      {
+        "start": 85,
+        "end": 91,
         "className": "syntax-type"
       },
       {
         "start": 91,
-        "end": 95,
-        "className": "syntax-variable"
+        "end": 92,
+        "className": "syntax-operator"
       },
       {
-        "start": 100,
-        "end": 111,
+        "start": 95,
+        "end": 103,
         "className": "syntax-function"
       },
       {
-        "start": 112,
-        "end": 133,
+        "start": 104,
+        "end": 113,
         "className": "syntax-type"
       },
       {
-        "start": 134,
-        "end": 141,
+        "start": 114,
+        "end": 117,
         "className": "syntax-variable"
       },
       {
-        "start": 143,
-        "end": 164,
-        "className": "syntax-type"
+        "start": 121,
+        "end": 150,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 151,
+        "end": 156,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 158,
+        "end": 161,
+        "className": "syntax-variable"
       },
       {
         "start": 165,
-        "end": 171,
+        "end": 173,
+        "className": "syntax-function"
+      },
+      {
+        "start": 174,
+        "end": 182,
+        "className": "syntax-function"
+      },
+      {
+        "start": 183,
+        "end": 186,
         "className": "syntax-variable"
       },
       {
-        "start": 189,
-        "end": 197,
+        "start": 190,
+        "end": 199,
         "className": "syntax-type"
       },
       {
-        "start": 197,
-        "end": 198,
-        "className": "syntax-operator"
+        "start": 200,
+        "end": 203,
+        "className": "syntax-variable"
       },
       {
-        "start": 199,
+        "start": 204,
         "end": 205,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 219,
-        "end": 226,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 227,
-        "end": 235,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 236,
-        "end": 251,
-        "className": "syntax-type"
-      },
-      {
-        "start": 251,
-        "end": 252,
         "className": "syntax-operator"
       },
       {
-        "start": 252,
-        "end": 273,
-        "className": "syntax-type"
+        "start": 206,
+        "end": 213,
+        "className": "syntax-function"
+      },
+      {
+        "start": 214,
+        "end": 217,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 220,
+        "end": 232,
+        "className": "syntax-function"
+      },
+      {
+        "start": 233,
+        "end": 236,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 239,
+        "end": 242,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 243,
+        "end": 244,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 245,
+        "end": 248,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 255,
+        "end": 263,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 263,
+        "end": 264,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 264,
+        "end": 272,
+        "className": "syntax-keyword"
       },
       {
         "start": 273,
-        "end": 274,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 276,
-        "end": 286,
+        "end": 277,
         "className": "syntax-type"
       },
       {
-        "start": 297,
-        "end": 307,
-        "className": "syntax-type"
-      },
-      {
-        "start": 315,
-        "end": 322,
+        "start": 279,
+        "end": 287,
         "className": "syntax-keyword"
       },
       {
-        "start": 323,
-        "end": 331,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 332,
-        "end": 347,
+        "start": 288,
+        "end": 292,
         "className": "syntax-type"
       },
       {
-        "start": 347,
-        "end": 348,
+        "start": 294,
+        "end": 302,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 303,
+        "end": 314,
+        "className": "syntax-type"
+      },
+      {
+        "start": 316,
+        "end": 324,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 325,
+        "end": 333,
+        "className": "syntax-type"
+      },
+      {
+        "start": 335,
+        "end": 343,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 344,
+        "end": 350,
+        "className": "syntax-type"
+      },
+      {
+        "start": 350,
+        "end": 351,
         "className": "syntax-operator"
       },
       {
-        "start": 348,
+        "start": 352,
+        "end": 360,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 361,
         "end": 369,
         "className": "syntax-type"
       },
@@ -10303,479 +10785,72 @@ export const codeSnippets = [
         "className": "syntax-operator"
       },
       {
-        "start": 372,
-        "end": 387,
+        "start": 370,
+        "end": 374,
         "className": "syntax-type"
       },
       {
-        "start": 398,
-        "end": 411,
+        "start": 376,
+        "end": 380,
         "className": "syntax-type"
       },
       {
-        "start": 420,
-        "end": 422,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 424,
-        "end": 430,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 431,
-        "end": 432,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 433,
-        "end": 440,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 441,
-        "end": 442,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 443,
-        "end": 444,
-        "className": "syntax-number"
-      },
-      {
-        "start": 454,
-        "end": 460,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 469,
-        "end": 474,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 475,
-        "end": 488,
-        "className": "syntax-type"
-      },
-      {
-        "start": 489,
-        "end": 494,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 495,
-        "end": 496,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 497,
-        "end": 503,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 504,
-        "end": 505,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 506,
-        "end": 513,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 521,
-        "end": 534,
-        "className": "syntax-type"
-      },
-      {
-        "start": 535,
-        "end": 543,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 544,
-        "end": 545,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 547,
-        "end": 552,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 553,
-        "end": 554,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 555,
-        "end": 556,
-        "className": "syntax-number"
-      },
-      {
-        "start": 560,
-        "end": 561,
-        "className": "syntax-number"
-      },
-      {
-        "start": 569,
-        "end": 574,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 602,
-        "end": 612,
-        "className": "syntax-type"
-      },
-      {
-        "start": 613,
-        "end": 620,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 621,
-        "end": 622,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 623,
-        "end": 636,
-        "className": "syntax-function"
-      },
-      {
-        "start": 637,
-        "end": 638,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 639,
-        "end": 646,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 647,
-        "end": 648,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 649,
-        "end": 657,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 676,
-        "end": 689,
-        "className": "syntax-function"
-      },
-      {
-        "start": 690,
-        "end": 697,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 699,
-        "end": 707,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 709,
-        "end": 714,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 716,
-        "end": 729,
-        "className": "syntax-function"
-      },
-      {
-        "start": 730,
-        "end": 737,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 769,
-        "end": 775,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 788,
-        "end": 790,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 792,
-        "end": 800,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 801,
-        "end": 803,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 804,
-        "end": 805,
-        "className": "syntax-number"
-      },
-      {
-        "start": 819,
-        "end": 825,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 837,
-        "end": 845,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 845,
-        "end": 847,
-        "className": "syntax-operator"
-      }
-    ]
-  },
-  {
-    "language": "cpp",
-    "name": "cpp/libstdcxx_tree_bounds.cpp",
-    "code": "           typename _Compare, typename _Alloc>\n    void\n    _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::\n    _M_erase(_Node_ptr __x)\n    {\n      // Erase without rebalancing.\n      while (__x)\n        {\n          _M_erase(_S_right(__x));\n          _Node_ptr __y = _S_left(__x);\n          _M_drop_node(__x);\n          __x = __y;\n        }\n    }\n\n  template<typename _Key, typename _Val, typename _KeyOfValue,\n           typename _Compare, typename _Alloc>\n    typename _Rb_tree<_Key, _Val, _KeyOfValue,\n                      _Compare, _Alloc>::_Base_ptr\n    _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::\n    _M_lower_bound(_Base_ptr __x, _Base_ptr __y,\n                   const _Key& __k) const\n    {\n      while (__x)\n        if (!_M_impl._M_key_compare(_S_key(__x), __k))\n          __y = __x, __x = _S_left(__x);\n        else\n          __x = _S_right(__x);\n      return __y;\n    }\n\n  template<typename _Key, typename _Val, typename _KeyOfValue,\n           typename _Compare, typename _Alloc>\n    typename _Rb_tree<_Key, _Val, _KeyOfValue,\n                      _Compare, _Alloc>::_Base_ptr\n    _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::\n    _M_upper_bound(_Base_ptr __x, _Base_ptr __y,\n                   const _Key& __k) const\n    {\n      while (__x)\n        if (_M_impl._M_key_compare(__k, _S_key(__x)))\n          __y = __x, __x = _S_left(__x);\n        else\n          __x = _S_right(__x);\n      return __y;\n    }\n\n  template<typename _Key, typename _Val, typename _KeyOfValue,\n           typename _Compare, typename _Alloc>\n    pair<typename _Rb_tree<_Key, _Val, _KeyOfValue,\n                           _Compare, _Alloc>::iterator,\n         typename _Rb_tree<_Key, _Val, _KeyOfValue,\n                           _Compare, _Alloc>::iterator>\n    _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::\n    equal_range(const _Key& __k)\n    {\n      typedef pair<iterator, iterator> _Ret;\n\n      _Base_ptr __x = _M_begin();\n      _Base_ptr __y = _M_end();\n      while (__x)\n        {\n          if (_M_impl._M_key_compare(_S_key(__x), __k))\n            __x = _S_right(__x);\n          else if (_M_impl._M_key_compare(__k, _S_key(__x)))\n            __y = __x, __x = _S_left(__x);\n          else\n            {\n              _Base_ptr __xu(__x);\n              _Base_ptr __yu(__y);\n              __y = __x, __x = _S_left(__x);\n              __xu = _S_right(__xu);\n              return _Ret(iterator(_M_lower_bound(__x, __y, __k)),\n                          iterator(_M_upper_bound(__xu, __yu, __k)));\n            }\n        }\n      return _Ret(iterator(__y), iterator(__y));\n    }\n\n  template<typename _Key, typename _Val, typename _KeyOfValue,\n           typename _Compare, typename _Alloc>\n    pair<typename _Rb_tree<_Key, _Val, _KeyOfValue,\n                           _Compare, _Alloc>::const_iterator,\n         typename _Rb_tree<_Key, _Val, _KeyOfValue,\n                           _Compare, _Alloc>::const_iterator>\n    _Rb_tree<_Key, _Val, _KeyOfValue, _Compare, _Alloc>::\n    equal_range(const _Key& __k) const\n    {\n      typedef pair<const_iterator, const_iterator> _Ret;\n\n      _Base_ptr __x = _M_begin();\n      _Base_ptr __y = _M_end();\n      while (__x)\n        {\n          if (_M_impl._M_key_compare(_S_key(__x), __k))\n            __x = _S_right(__x);\n          else if (_M_impl._M_key_compare(__k, _S_key(__x)))\n            __y = __x, __x = _S_left(__x);\n          else\n            {\n              _Base_ptr __xu(__x);\n              _Base_ptr __yu(__y);\n              __y = __x, __x = _S_left(__x);\n              __xu = _S_right(__xu);\n              return _Ret(const_iterator(_M_lower_bound(__x, __y, __k)),\n                          const_iterator(_M_upper_bound(__xu, __yu, __k)));\n            }\n        }\n      return _Ret(const_iterator(__y), const_iterator(__y));",
-    "spans": [
-      {
-        "start": 11,
-        "end": 19,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 20,
-        "end": 28,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 30,
-        "end": 38,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 39,
-        "end": 45,
-        "className": "syntax-type"
-      },
-      {
-        "start": 45,
-        "end": 46,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 51,
-        "end": 55,
-        "className": "syntax-type"
-      },
-      {
-        "start": 60,
-        "end": 68,
-        "className": "syntax-type"
-      },
-      {
-        "start": 68,
-        "end": 69,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 69,
-        "end": 73,
-        "className": "syntax-type"
-      },
-      {
-        "start": 75,
-        "end": 79,
-        "className": "syntax-type"
-      },
-      {
-        "start": 81,
-        "end": 92,
-        "className": "syntax-type"
-      },
-      {
-        "start": 94,
-        "end": 102,
-        "className": "syntax-type"
-      },
-      {
-        "start": 104,
-        "end": 110,
-        "className": "syntax-type"
-      },
-      {
-        "start": 110,
-        "end": 111,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 118,
-        "end": 126,
-        "className": "syntax-function"
-      },
-      {
-        "start": 127,
-        "end": 136,
-        "className": "syntax-type"
-      },
-      {
-        "start": 137,
-        "end": 140,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 154,
-        "end": 183,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 190,
-        "end": 195,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 197,
-        "end": 200,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 222,
-        "end": 230,
-        "className": "syntax-function"
-      },
-      {
-        "start": 231,
-        "end": 239,
-        "className": "syntax-function"
-      },
-      {
-        "start": 240,
-        "end": 243,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 257,
-        "end": 266,
-        "className": "syntax-type"
-      },
-      {
-        "start": 267,
-        "end": 270,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 271,
-        "end": 272,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 273,
-        "end": 280,
-        "className": "syntax-function"
-      },
-      {
-        "start": 281,
-        "end": 284,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 297,
-        "end": 309,
-        "className": "syntax-function"
-      },
-      {
-        "start": 310,
-        "end": 313,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 326,
-        "end": 329,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 330,
-        "end": 331,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 332,
-        "end": 335,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 356,
-        "end": 364,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 364,
-        "end": 365,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 365,
-        "end": 373,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 374,
-        "end": 378,
-        "className": "syntax-type"
-      },
-      {
-        "start": 380,
-        "end": 388,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 389,
+        "start": 382,
         "end": 393,
         "className": "syntax-type"
       },
       {
-        "start": 395,
-        "end": 403,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 404,
-        "end": 415,
+        "start": 406,
+        "end": 414,
         "className": "syntax-type"
       },
       {
-        "start": 428,
-        "end": 436,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 437,
-        "end": 445,
+        "start": 416,
+        "end": 422,
         "className": "syntax-type"
       },
       {
-        "start": 447,
-        "end": 455,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 456,
-        "end": 462,
-        "className": "syntax-type"
-      },
-      {
-        "start": 462,
-        "end": 463,
+        "start": 422,
+        "end": 423,
         "className": "syntax-operator"
       },
       {
-        "start": 468,
-        "end": 476,
-        "className": "syntax-keyword"
+        "start": 425,
+        "end": 434,
+        "className": "syntax-type"
       },
       {
-        "start": 477,
+        "start": 435,
+        "end": 443,
+        "className": "syntax-type"
+      },
+      {
+        "start": 443,
+        "end": 444,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 444,
+        "end": 448,
+        "className": "syntax-type"
+      },
+      {
+        "start": 450,
+        "end": 454,
+        "className": "syntax-type"
+      },
+      {
+        "start": 456,
+        "end": 467,
+        "className": "syntax-type"
+      },
+      {
+        "start": 469,
+        "end": 477,
+        "className": "syntax-type"
+      },
+      {
+        "start": 479,
         "end": 485,
         "className": "syntax-type"
       },
@@ -10785,769 +10860,969 @@ export const codeSnippets = [
         "className": "syntax-operator"
       },
       {
-        "start": 486,
-        "end": 490,
-        "className": "syntax-type"
-      },
-      {
-        "start": 492,
-        "end": 496,
-        "className": "syntax-type"
-      },
-      {
-        "start": 498,
-        "end": 509,
-        "className": "syntax-type"
-      },
-      {
-        "start": 533,
-        "end": 541,
-        "className": "syntax-type"
-      },
-      {
-        "start": 543,
-        "end": 549,
-        "className": "syntax-type"
-      },
-      {
-        "start": 549,
-        "end": 550,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 552,
-        "end": 561,
-        "className": "syntax-type"
-      },
-      {
-        "start": 566,
-        "end": 574,
-        "className": "syntax-type"
-      },
-      {
-        "start": 574,
-        "end": 575,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 575,
-        "end": 579,
-        "className": "syntax-type"
-      },
-      {
-        "start": 581,
-        "end": 585,
-        "className": "syntax-type"
-      },
-      {
-        "start": 587,
-        "end": 598,
-        "className": "syntax-type"
-      },
-      {
-        "start": 600,
-        "end": 608,
-        "className": "syntax-type"
-      },
-      {
-        "start": 610,
-        "end": 616,
-        "className": "syntax-type"
-      },
-      {
-        "start": 616,
-        "end": 617,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 624,
-        "end": 638,
+        "start": 489,
+        "end": 503,
         "className": "syntax-function"
       },
       {
-        "start": 639,
-        "end": 648,
+        "start": 504,
+        "end": 513,
         "className": "syntax-type"
       },
       {
-        "start": 649,
-        "end": 652,
+        "start": 514,
+        "end": 517,
         "className": "syntax-variable"
       },
       {
-        "start": 654,
-        "end": 663,
+        "start": 519,
+        "end": 528,
         "className": "syntax-type"
       },
       {
-        "start": 664,
-        "end": 667,
+        "start": 529,
+        "end": 532,
         "className": "syntax-variable"
       },
       {
-        "start": 688,
-        "end": 693,
+        "start": 542,
+        "end": 547,
         "className": "syntax-keyword"
       },
       {
-        "start": 694,
-        "end": 698,
+        "start": 548,
+        "end": 552,
         "className": "syntax-type"
       },
       {
-        "start": 698,
-        "end": 699,
+        "start": 552,
+        "end": 553,
         "className": "syntax-operator"
       },
       {
-        "start": 700,
-        "end": 703,
+        "start": 554,
+        "end": 557,
         "className": "syntax-variable"
       },
       {
-        "start": 705,
-        "end": 710,
+        "start": 559,
+        "end": 564,
         "className": "syntax-keyword"
       },
       {
-        "start": 723,
-        "end": 728,
+        "start": 567,
+        "end": 572,
         "className": "syntax-keyword"
       },
       {
-        "start": 730,
-        "end": 733,
+        "start": 574,
+        "end": 577,
         "className": "syntax-variable"
       },
       {
-        "start": 743,
+        "start": 579,
+        "end": 581,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 584,
+        "end": 591,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 592,
+        "end": 606,
+        "className": "syntax-function"
+      },
+      {
+        "start": 607,
+        "end": 613,
+        "className": "syntax-function"
+      },
+      {
+        "start": 614,
+        "end": 617,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 620,
+        "end": 623,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 626,
+        "end": 629,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 630,
+        "end": 631,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 632,
+        "end": 635,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 637,
+        "end": 640,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 641,
+        "end": 642,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 643,
+        "end": 650,
+        "className": "syntax-function"
+      },
+      {
+        "start": 651,
+        "end": 654,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 657,
+        "end": 661,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 662,
+        "end": 665,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 666,
+        "end": 667,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 668,
+        "end": 676,
+        "className": "syntax-function"
+      },
+      {
+        "start": 677,
+        "end": 680,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 683,
+        "end": 689,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 690,
+        "end": 693,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 698,
+        "end": 706,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 706,
+        "end": 707,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 707,
+        "end": 715,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 716,
+        "end": 720,
+        "className": "syntax-type"
+      },
+      {
+        "start": 722,
+        "end": 730,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 731,
+        "end": 735,
+        "className": "syntax-type"
+      },
+      {
+        "start": 737,
         "end": 745,
         "className": "syntax-keyword"
       },
       {
-        "start": 748,
-        "end": 755,
-        "className": "syntax-variable"
+        "start": 746,
+        "end": 757,
+        "className": "syntax-type"
       },
       {
-        "start": 756,
-        "end": 770,
-        "className": "syntax-function"
+        "start": 759,
+        "end": 767,
+        "className": "syntax-keyword"
       },
       {
-        "start": 771,
-        "end": 777,
-        "className": "syntax-function"
+        "start": 768,
+        "end": 776,
+        "className": "syntax-type"
       },
       {
         "start": 778,
-        "end": 781,
-        "className": "syntax-variable"
+        "end": 786,
+        "className": "syntax-keyword"
       },
       {
-        "start": 784,
-        "end": 787,
-        "className": "syntax-variable"
+        "start": 787,
+        "end": 793,
+        "className": "syntax-type"
       },
       {
-        "start": 800,
+        "start": 793,
+        "end": 794,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 795,
         "end": 803,
-        "className": "syntax-variable"
+        "className": "syntax-keyword"
       },
       {
         "start": 804,
-        "end": 805,
+        "end": 812,
+        "className": "syntax-type"
+      },
+      {
+        "start": 812,
+        "end": 813,
         "className": "syntax-operator"
       },
       {
-        "start": 806,
-        "end": 809,
-        "className": "syntax-variable"
+        "start": 813,
+        "end": 817,
+        "className": "syntax-type"
       },
       {
-        "start": 811,
-        "end": 814,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 815,
-        "end": 816,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 817,
-        "end": 824,
-        "className": "syntax-function"
+        "start": 819,
+        "end": 823,
+        "className": "syntax-type"
       },
       {
         "start": 825,
-        "end": 828,
-        "className": "syntax-variable"
+        "end": 836,
+        "className": "syntax-type"
       },
       {
-        "start": 839,
-        "end": 843,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 854,
+        "start": 849,
         "end": 857,
-        "className": "syntax-variable"
+        "className": "syntax-type"
       },
       {
-        "start": 858,
-        "end": 859,
+        "start": 859,
+        "end": 865,
+        "className": "syntax-type"
+      },
+      {
+        "start": 865,
+        "end": 866,
         "className": "syntax-operator"
       },
       {
-        "start": 860,
-        "end": 868,
+        "start": 868,
+        "end": 877,
+        "className": "syntax-type"
+      },
+      {
+        "start": 878,
+        "end": 886,
+        "className": "syntax-type"
+      },
+      {
+        "start": 886,
+        "end": 887,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 887,
+        "end": 891,
+        "className": "syntax-type"
+      },
+      {
+        "start": 893,
+        "end": 897,
+        "className": "syntax-type"
+      },
+      {
+        "start": 899,
+        "end": 910,
+        "className": "syntax-type"
+      },
+      {
+        "start": 912,
+        "end": 920,
+        "className": "syntax-type"
+      },
+      {
+        "start": 922,
+        "end": 928,
+        "className": "syntax-type"
+      },
+      {
+        "start": 928,
+        "end": 929,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 932,
+        "end": 946,
         "className": "syntax-function"
       },
       {
-        "start": 869,
-        "end": 872,
+        "start": 947,
+        "end": 956,
+        "className": "syntax-type"
+      },
+      {
+        "start": 957,
+        "end": 960,
         "className": "syntax-variable"
       },
       {
-        "start": 881,
-        "end": 887,
-        "className": "syntax-keyword"
+        "start": 962,
+        "end": 971,
+        "className": "syntax-type"
       },
       {
-        "start": 888,
-        "end": 891,
+        "start": 972,
+        "end": 975,
         "className": "syntax-variable"
       },
       {
-        "start": 902,
-        "end": 910,
+        "start": 985,
+        "end": 990,
         "className": "syntax-keyword"
       },
       {
-        "start": 910,
-        "end": 911,
+        "start": 991,
+        "end": 995,
+        "className": "syntax-type"
+      },
+      {
+        "start": 995,
+        "end": 996,
         "className": "syntax-operator"
       },
       {
-        "start": 911,
-        "end": 919,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 920,
-        "end": 924,
-        "className": "syntax-type"
-      },
-      {
-        "start": 926,
-        "end": 934,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 935,
-        "end": 939,
-        "className": "syntax-type"
-      },
-      {
-        "start": 941,
-        "end": 949,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 950,
-        "end": 961,
-        "className": "syntax-type"
-      },
-      {
-        "start": 974,
-        "end": 982,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 983,
-        "end": 991,
-        "className": "syntax-type"
-      },
-      {
-        "start": 993,
-        "end": 1001,
-        "className": "syntax-keyword"
+        "start": 997,
+        "end": 1000,
+        "className": "syntax-variable"
       },
       {
         "start": 1002,
-        "end": 1008,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1008,
-        "end": 1009,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1014,
-        "end": 1022,
+        "end": 1007,
         "className": "syntax-keyword"
       },
       {
-        "start": 1023,
-        "end": 1031,
-        "className": "syntax-type"
+        "start": 1010,
+        "end": 1015,
+        "className": "syntax-keyword"
       },
       {
-        "start": 1031,
-        "end": 1032,
+        "start": 1017,
+        "end": 1020,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1022,
+        "end": 1024,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1026,
+        "end": 1033,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1034,
+        "end": 1048,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1049,
+        "end": 1052,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1054,
+        "end": 1060,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1061,
+        "end": 1064,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1068,
+        "end": 1071,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1072,
+        "end": 1073,
         "className": "syntax-operator"
       },
       {
-        "start": 1032,
-        "end": 1036,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1038,
-        "end": 1042,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1044,
-        "end": 1055,
-        "className": "syntax-type"
+        "start": 1074,
+        "end": 1077,
+        "className": "syntax-variable"
       },
       {
         "start": 1079,
-        "end": 1087,
-        "className": "syntax-type"
+        "end": 1082,
+        "className": "syntax-variable"
       },
       {
-        "start": 1089,
-        "end": 1095,
-        "className": "syntax-type"
+        "start": 1083,
+        "end": 1084,
+        "className": "syntax-operator"
       },
       {
-        "start": 1095,
+        "start": 1085,
+        "end": 1092,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1093,
         "end": 1096,
-        "className": "syntax-operator"
+        "className": "syntax-variable"
       },
       {
-        "start": 1098,
+        "start": 1099,
+        "end": 1103,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1104,
         "end": 1107,
-        "className": "syntax-type"
+        "className": "syntax-variable"
       },
       {
-        "start": 1112,
-        "end": 1120,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1120,
-        "end": 1121,
+        "start": 1108,
+        "end": 1109,
         "className": "syntax-operator"
       },
       {
-        "start": 1121,
-        "end": 1125,
-        "className": "syntax-type"
+        "start": 1110,
+        "end": 1118,
+        "className": "syntax-function"
       },
       {
-        "start": 1127,
+        "start": 1119,
+        "end": 1122,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1125,
         "end": 1131,
-        "className": "syntax-type"
+        "className": "syntax-keyword"
       },
       {
-        "start": 1133,
-        "end": 1144,
-        "className": "syntax-type"
+        "start": 1132,
+        "end": 1135,
+        "className": "syntax-variable"
       },
       {
-        "start": 1146,
-        "end": 1154,
-        "className": "syntax-type"
+        "start": 1140,
+        "end": 1148,
+        "className": "syntax-keyword"
       },
       {
-        "start": 1156,
+        "start": 1148,
+        "end": 1149,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1149,
+        "end": 1157,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1158,
         "end": 1162,
         "className": "syntax-type"
       },
       {
-        "start": 1162,
-        "end": 1163,
-        "className": "syntax-operator"
+        "start": 1164,
+        "end": 1172,
+        "className": "syntax-keyword"
       },
       {
-        "start": 1170,
-        "end": 1184,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1185,
-        "end": 1194,
+        "start": 1173,
+        "end": 1177,
         "className": "syntax-type"
       },
       {
-        "start": 1195,
-        "end": 1198,
-        "className": "syntax-variable"
+        "start": 1179,
+        "end": 1187,
+        "className": "syntax-keyword"
       },
       {
-        "start": 1200,
+        "start": 1188,
+        "end": 1199,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1201,
         "end": 1209,
-        "className": "syntax-type"
+        "className": "syntax-keyword"
       },
       {
         "start": 1210,
-        "end": 1213,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1234,
-        "end": 1239,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1240,
-        "end": 1244,
+        "end": 1218,
         "className": "syntax-type"
       },
       {
-        "start": 1244,
-        "end": 1245,
+        "start": 1220,
+        "end": 1228,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1229,
+        "end": 1235,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1235,
+        "end": 1236,
         "className": "syntax-operator"
       },
       {
-        "start": 1246,
-        "end": 1249,
-        "className": "syntax-variable"
+        "start": 1237,
+        "end": 1241,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1241,
+        "end": 1242,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1242,
+        "end": 1250,
+        "className": "syntax-keyword"
       },
       {
         "start": 1251,
-        "end": 1256,
-        "className": "syntax-keyword"
+        "end": 1259,
+        "className": "syntax-type"
       },
       {
-        "start": 1269,
-        "end": 1274,
-        "className": "syntax-keyword"
+        "start": 1259,
+        "end": 1260,
+        "className": "syntax-operator"
       },
       {
-        "start": 1276,
-        "end": 1279,
-        "className": "syntax-variable"
+        "start": 1260,
+        "end": 1264,
+        "className": "syntax-type"
       },
       {
-        "start": 1289,
-        "end": 1291,
-        "className": "syntax-keyword"
+        "start": 1266,
+        "end": 1270,
+        "className": "syntax-type"
       },
       {
-        "start": 1293,
-        "end": 1300,
-        "className": "syntax-variable"
+        "start": 1272,
+        "end": 1283,
+        "className": "syntax-type"
       },
       {
         "start": 1301,
-        "end": 1315,
-        "className": "syntax-function"
+        "end": 1309,
+        "className": "syntax-type"
       },
       {
-        "start": 1316,
-        "end": 1319,
-        "className": "syntax-variable"
+        "start": 1311,
+        "end": 1317,
+        "className": "syntax-type"
       },
       {
-        "start": 1321,
-        "end": 1327,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1328,
-        "end": 1331,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1345,
-        "end": 1348,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1349,
-        "end": 1350,
+        "start": 1317,
+        "end": 1318,
         "className": "syntax-operator"
       },
       {
-        "start": 1351,
-        "end": 1354,
-        "className": "syntax-variable"
+        "start": 1320,
+        "end": 1328,
+        "className": "syntax-type"
       },
       {
-        "start": 1356,
-        "end": 1359,
-        "className": "syntax-variable"
+        "start": 1330,
+        "end": 1338,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1339,
+        "end": 1347,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1347,
+        "end": 1348,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1348,
+        "end": 1352,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1354,
+        "end": 1358,
+        "className": "syntax-type"
       },
       {
         "start": 1360,
-        "end": 1361,
-        "className": "syntax-operator"
+        "end": 1371,
+        "className": "syntax-type"
       },
       {
-        "start": 1362,
-        "end": 1369,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1370,
-        "end": 1373,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1384,
-        "end": 1388,
-        "className": "syntax-keyword"
+        "start": 1389,
+        "end": 1397,
+        "className": "syntax-type"
       },
       {
         "start": 1399,
-        "end": 1402,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1403,
-        "end": 1404,
-        "className": "syntax-operator"
+        "end": 1405,
+        "className": "syntax-type"
       },
       {
         "start": 1405,
-        "end": 1413,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1414,
-        "end": 1417,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1426,
-        "end": 1432,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1433,
-        "end": 1436,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1447,
-        "end": 1455,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1455,
-        "end": 1456,
+        "end": 1406,
         "className": "syntax-operator"
       },
       {
-        "start": 1456,
-        "end": 1464,
-        "className": "syntax-keyword"
+        "start": 1408,
+        "end": 1416,
+        "className": "syntax-type"
       },
       {
-        "start": 1465,
+        "start": 1416,
+        "end": 1417,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1418,
+        "end": 1426,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1426,
+        "end": 1427,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1427,
+        "end": 1431,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1433,
+        "end": 1437,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1439,
+        "end": 1450,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1452,
+        "end": 1460,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1462,
+        "end": 1468,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1468,
         "end": 1469,
-        "className": "syntax-type"
+        "className": "syntax-operator"
       },
       {
-        "start": 1471,
-        "end": 1479,
+        "start": 1472,
+        "end": 1483,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1484,
+        "end": 1489,
         "className": "syntax-keyword"
       },
       {
-        "start": 1480,
-        "end": 1484,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1486,
+        "start": 1490,
         "end": 1494,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1495,
-        "end": 1506,
         "className": "syntax-type"
       },
       {
-        "start": 1519,
-        "end": 1527,
+        "start": 1494,
+        "end": 1495,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1496,
+        "end": 1499,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1503,
+        "end": 1510,
         "className": "syntax-keyword"
       },
       {
-        "start": 1528,
-        "end": 1536,
+        "start": 1511,
+        "end": 1515,
         "className": "syntax-type"
       },
       {
-        "start": 1538,
-        "end": 1546,
-        "className": "syntax-keyword"
+        "start": 1515,
+        "end": 1516,
+        "className": "syntax-operator"
       },
       {
-        "start": 1547,
-        "end": 1553,
+        "start": 1516,
+        "end": 1524,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1526,
+        "end": 1534,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1534,
+        "end": 1535,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1536,
+        "end": 1540,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1543,
+        "end": 1552,
         "className": "syntax-type"
       },
       {
         "start": 1553,
-        "end": 1554,
+        "end": 1556,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1557,
+        "end": 1558,
         "className": "syntax-operator"
       },
       {
         "start": 1559,
-        "end": 1563,
-        "className": "syntax-type"
+        "end": 1567,
+        "className": "syntax-function"
       },
       {
-        "start": 1563,
-        "end": 1564,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1564,
-        "end": 1572,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1573,
-        "end": 1581,
+        "start": 1571,
+        "end": 1580,
         "className": "syntax-type"
       },
       {
         "start": 1581,
-        "end": 1582,
-        "className": "syntax-operator"
+        "end": 1584,
+        "className": "syntax-variable"
       },
       {
-        "start": 1582,
+        "start": 1585,
         "end": 1586,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1588,
-        "end": 1592,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1594,
-        "end": 1605,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1634,
-        "end": 1642,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1644,
-        "end": 1650,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1650,
-        "end": 1651,
         "className": "syntax-operator"
       },
       {
-        "start": 1653,
-        "end": 1661,
-        "className": "syntax-type"
+        "start": 1587,
+        "end": 1593,
+        "className": "syntax-function"
       },
       {
-        "start": 1672,
-        "end": 1680,
+        "start": 1597,
+        "end": 1602,
         "className": "syntax-keyword"
       },
       {
-        "start": 1681,
-        "end": 1689,
-        "className": "syntax-type"
+        "start": 1604,
+        "end": 1607,
+        "className": "syntax-variable"
       },
       {
-        "start": 1689,
-        "end": 1690,
+        "start": 1611,
+        "end": 1613,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1615,
+        "end": 1622,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1623,
+        "end": 1637,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1638,
+        "end": 1644,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1645,
+        "end": 1648,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1651,
+        "end": 1654,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1658,
+        "end": 1661,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1662,
+        "end": 1663,
         "className": "syntax-operator"
       },
       {
-        "start": 1690,
-        "end": 1694,
-        "className": "syntax-type"
+        "start": 1664,
+        "end": 1672,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1673,
+        "end": 1676,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1679,
+        "end": 1683,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1684,
+        "end": 1686,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1688,
+        "end": 1695,
+        "className": "syntax-variable"
       },
       {
         "start": 1696,
-        "end": 1700,
-        "className": "syntax-type"
+        "end": 1710,
+        "className": "syntax-function"
       },
       {
-        "start": 1702,
-        "end": 1713,
-        "className": "syntax-type"
+        "start": 1711,
+        "end": 1714,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1716,
+        "end": 1722,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1723,
+        "end": 1726,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1731,
+        "end": 1734,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1735,
+        "end": 1736,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1737,
+        "end": 1740,
+        "className": "syntax-variable"
       },
       {
         "start": 1742,
-        "end": 1750,
-        "className": "syntax-type"
+        "end": 1745,
+        "className": "syntax-variable"
       },
       {
-        "start": 1752,
-        "end": 1758,
-        "className": "syntax-type"
+        "start": 1746,
+        "end": 1747,
+        "className": "syntax-operator"
       },
       {
-        "start": 1758,
+        "start": 1748,
+        "end": 1755,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1756,
         "end": 1759,
-        "className": "syntax-operator"
+        "className": "syntax-variable"
       },
       {
-        "start": 1761,
-        "end": 1769,
-        "className": "syntax-type"
+        "start": 1762,
+        "end": 1766,
+        "className": "syntax-keyword"
       },
       {
-        "start": 1769,
-        "end": 1770,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1775,
-        "end": 1783,
+        "start": 1773,
+        "end": 1782,
         "className": "syntax-type"
       },
       {
         "start": 1783,
-        "end": 1784,
-        "className": "syntax-operator"
+        "end": 1787,
+        "className": "syntax-function"
       },
       {
-        "start": 1784,
-        "end": 1788,
+        "start": 1788,
+        "end": 1791,
         "className": "syntax-type"
       },
       {
-        "start": 1790,
-        "end": 1794,
+        "start": 1797,
+        "end": 1806,
         "className": "syntax-type"
       },
       {
-        "start": 1796,
-        "end": 1807,
+        "start": 1807,
+        "end": 1811,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1812,
+        "end": 1815,
         "className": "syntax-type"
       },
       {
-        "start": 1809,
-        "end": 1817,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1819,
-        "end": 1825,
-        "className": "syntax-type"
+        "start": 1821,
+        "end": 1824,
+        "className": "syntax-variable"
       },
       {
         "start": 1825,
@@ -11555,409 +11830,499 @@ export const codeSnippets = [
         "className": "syntax-operator"
       },
       {
-        "start": 1833,
-        "end": 1844,
+        "start": 1827,
+        "end": 1830,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1832,
+        "end": 1835,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1836,
+        "end": 1837,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1838,
+        "end": 1845,
         "className": "syntax-function"
       },
       {
-        "start": 1845,
-        "end": 1850,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1851,
-        "end": 1855,
-        "className": "syntax-type"
+        "start": 1846,
+        "end": 1849,
+        "className": "syntax-variable"
       },
       {
         "start": 1855,
-        "end": 1856,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1857,
-        "end": 1860,
+        "end": 1859,
         "className": "syntax-variable"
       },
       {
-        "start": 1874,
-        "end": 1881,
-        "className": "syntax-keyword"
+        "start": 1860,
+        "end": 1861,
+        "className": "syntax-operator"
       },
       {
-        "start": 1882,
-        "end": 1886,
-        "className": "syntax-type"
+        "start": 1862,
+        "end": 1870,
+        "className": "syntax-function"
       },
       {
-        "start": 1886,
+        "start": 1871,
+        "end": 1875,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1881,
         "end": 1887,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1887,
-        "end": 1895,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1897,
-        "end": 1905,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1905,
-        "end": 1906,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1907,
-        "end": 1911,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1920,
-        "end": 1929,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1930,
-        "end": 1933,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1934,
-        "end": 1935,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1936,
-        "end": 1944,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1954,
-        "end": 1963,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1964,
-        "end": 1967,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1968,
-        "end": 1969,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1970,
-        "end": 1976,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1986,
-        "end": 1991,
         "className": "syntax-keyword"
       },
       {
-        "start": 1993,
-        "end": 1996,
+        "start": 1888,
+        "end": 1892,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1893,
+        "end": 1901,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1902,
+        "end": 1916,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1917,
+        "end": 1920,
         "className": "syntax-variable"
       },
       {
-        "start": 2018,
-        "end": 2020,
+        "start": 1922,
+        "end": 1925,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1927,
+        "end": 1930,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1949,
+        "end": 1957,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1958,
+        "end": 1972,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1973,
+        "end": 1977,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1979,
+        "end": 1983,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1985,
+        "end": 1988,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1998,
+        "end": 2004,
         "className": "syntax-keyword"
       },
       {
-        "start": 2022,
-        "end": 2029,
+        "start": 2005,
+        "end": 2009,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2010,
+        "end": 2018,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2019,
+        "end": 2022,
         "className": "syntax-variable"
       },
       {
-        "start": 2030,
-        "end": 2044,
+        "start": 2025,
+        "end": 2033,
         "className": "syntax-function"
       },
       {
-        "start": 2045,
-        "end": 2051,
-        "className": "syntax-function"
+        "start": 2034,
+        "end": 2037,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2044,
+        "end": 2052,
+        "className": "syntax-keyword"
       },
       {
         "start": 2052,
-        "end": 2055,
-        "className": "syntax-variable"
+        "end": 2053,
+        "className": "syntax-operator"
       },
       {
-        "start": 2058,
+        "start": 2053,
         "end": 2061,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2076,
-        "end": 2079,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2080,
-        "end": 2081,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2082,
-        "end": 2090,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2091,
-        "end": 2094,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2107,
-        "end": 2111,
         "className": "syntax-keyword"
       },
       {
-        "start": 2112,
-        "end": 2114,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2116,
-        "end": 2123,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2124,
-        "end": 2138,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2139,
-        "end": 2142,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2144,
-        "end": 2150,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2151,
-        "end": 2154,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2170,
-        "end": 2173,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2174,
-        "end": 2175,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2176,
-        "end": 2179,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2181,
-        "end": 2184,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2185,
-        "end": 2186,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2187,
-        "end": 2194,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2195,
-        "end": 2198,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2211,
-        "end": 2215,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2244,
-        "end": 2253,
+        "start": 2062,
+        "end": 2066,
         "className": "syntax-type"
       },
       {
-        "start": 2254,
-        "end": 2258,
-        "className": "syntax-function"
+        "start": 2068,
+        "end": 2076,
+        "className": "syntax-keyword"
       },
       {
-        "start": 2259,
+        "start": 2077,
+        "end": 2081,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2083,
+        "end": 2091,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2092,
+        "end": 2103,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2105,
+        "end": 2113,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2114,
+        "end": 2122,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2124,
+        "end": 2132,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2133,
+        "end": 2139,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2139,
+        "end": 2140,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2141,
+        "end": 2145,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2145,
+        "end": 2146,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2146,
+        "end": 2154,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2155,
+        "end": 2163,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2163,
+        "end": 2164,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2164,
+        "end": 2168,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2170,
+        "end": 2174,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2176,
+        "end": 2187,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2205,
+        "end": 2213,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2215,
+        "end": 2221,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2221,
+        "end": 2222,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2224,
+        "end": 2238,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2240,
+        "end": 2248,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2249,
+        "end": 2257,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2257,
+        "end": 2258,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2258,
         "end": 2262,
         "className": "syntax-type"
       },
       {
-        "start": 2279,
-        "end": 2288,
+        "start": 2264,
+        "end": 2268,
         "className": "syntax-type"
       },
       {
-        "start": 2289,
-        "end": 2293,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2294,
-        "end": 2297,
+        "start": 2270,
+        "end": 2281,
         "className": "syntax-type"
       },
       {
-        "start": 2314,
-        "end": 2317,
-        "className": "syntax-variable"
+        "start": 2299,
+        "end": 2307,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2309,
+        "end": 2315,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2315,
+        "end": 2316,
+        "className": "syntax-operator"
       },
       {
         "start": 2318,
-        "end": 2319,
+        "end": 2332,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2332,
+        "end": 2333,
         "className": "syntax-operator"
       },
       {
-        "start": 2320,
-        "end": 2323,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2325,
-        "end": 2328,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2329,
-        "end": 2330,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2331,
-        "end": 2338,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2339,
+        "start": 2334,
         "end": 2342,
-        "className": "syntax-variable"
+        "className": "syntax-type"
       },
       {
-        "start": 2359,
-        "end": 2363,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2364,
-        "end": 2365,
+        "start": 2342,
+        "end": 2343,
         "className": "syntax-operator"
       },
       {
-        "start": 2366,
-        "end": 2374,
+        "start": 2343,
+        "end": 2347,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2349,
+        "end": 2353,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2355,
+        "end": 2366,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2368,
+        "end": 2376,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2378,
+        "end": 2384,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2384,
+        "end": 2385,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2388,
+        "end": 2399,
         "className": "syntax-function"
       },
       {
-        "start": 2375,
-        "end": 2379,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2396,
-        "end": 2402,
+        "start": 2400,
+        "end": 2405,
         "className": "syntax-keyword"
       },
       {
-        "start": 2403,
-        "end": 2407,
-        "className": "syntax-function"
+        "start": 2406,
+        "end": 2410,
+        "className": "syntax-type"
       },
       {
-        "start": 2408,
-        "end": 2416,
-        "className": "syntax-function"
+        "start": 2410,
+        "end": 2411,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2412,
+        "end": 2415,
+        "className": "syntax-variable"
       },
       {
         "start": 2417,
-        "end": 2431,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2432,
-        "end": 2435,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2437,
-        "end": 2440,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2442,
-        "end": 2445,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2475,
-        "end": 2483,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2484,
-        "end": 2498,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2499,
-        "end": 2503,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2505,
-        "end": 2509,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2511,
-        "end": 2514,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2549,
-        "end": 2555,
+        "end": 2422,
         "className": "syntax-keyword"
       },
       {
-        "start": 2556,
-        "end": 2560,
-        "className": "syntax-function"
+        "start": 2425,
+        "end": 2432,
+        "className": "syntax-keyword"
       },
       {
-        "start": 2561,
-        "end": 2569,
-        "className": "syntax-function"
+        "start": 2433,
+        "end": 2437,
+        "className": "syntax-type"
       },
       {
-        "start": 2570,
-        "end": 2573,
+        "start": 2437,
+        "end": 2438,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2438,
+        "end": 2452,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2454,
+        "end": 2468,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2468,
+        "end": 2469,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2470,
+        "end": 2474,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2477,
+        "end": 2486,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2487,
+        "end": 2490,
         "className": "syntax-variable"
       },
       {
-        "start": 2576,
-        "end": 2584,
+        "start": 2491,
+        "end": 2492,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2493,
+        "end": 2501,
         "className": "syntax-function"
+      },
+      {
+        "start": 2505,
+        "end": 2514,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2515,
+        "end": 2518,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2519,
+        "end": 2520,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2521,
+        "end": 2527,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2531,
+        "end": 2536,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2538,
+        "end": 2541,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2545,
+        "end": 2547,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2549,
+        "end": 2556,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2557,
+        "end": 2571,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2572,
+        "end": 2578,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2579,
+        "end": 2582,
+        "className": "syntax-variable"
       },
       {
         "start": 2585,
@@ -11965,638 +12330,273 @@ export const codeSnippets = [
         "className": "syntax-variable"
       },
       {
-        "start": 2601,
-        "end": 2609,
-        "className": "syntax-keyword"
+        "start": 2592,
+        "end": 2595,
+        "className": "syntax-variable"
       },
       {
-        "start": 2609,
-        "end": 2610,
+        "start": 2596,
+        "end": 2597,
         "className": "syntax-operator"
       },
       {
-        "start": 2610,
-        "end": 2618,
+        "start": 2598,
+        "end": 2606,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2607,
+        "end": 2610,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2613,
+        "end": 2617,
         "className": "syntax-keyword"
       },
       {
-        "start": 2619,
-        "end": 2623,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2625,
-        "end": 2633,
+        "start": 2618,
+        "end": 2620,
         "className": "syntax-keyword"
       },
       {
-        "start": 2634,
-        "end": 2638,
-        "className": "syntax-type"
+        "start": 2622,
+        "end": 2629,
+        "className": "syntax-variable"
       },
       {
-        "start": 2640,
+        "start": 2630,
+        "end": 2644,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2645,
         "end": 2648,
-        "className": "syntax-keyword"
+        "className": "syntax-variable"
       },
       {
-        "start": 2649,
+        "start": 2650,
+        "end": 2656,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2657,
         "end": 2660,
-        "className": "syntax-type"
+        "className": "syntax-variable"
       },
       {
-        "start": 2673,
+        "start": 2665,
+        "end": 2668,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2669,
+        "end": 2670,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2671,
+        "end": 2674,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2676,
+        "end": 2679,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2680,
         "end": 2681,
-        "className": "syntax-keyword"
+        "className": "syntax-operator"
       },
       {
         "start": 2682,
-        "end": 2690,
-        "className": "syntax-type"
+        "end": 2689,
+        "className": "syntax-function"
       },
       {
-        "start": 2692,
+        "start": 2690,
+        "end": 2693,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2696,
         "end": 2700,
         "className": "syntax-keyword"
       },
       {
-        "start": 2701,
-        "end": 2707,
-        "className": "syntax-type"
-      },
-      {
         "start": 2707,
-        "end": 2708,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2713,
-        "end": 2717,
+        "end": 2716,
         "className": "syntax-type"
       },
       {
         "start": 2717,
-        "end": 2718,
-        "className": "syntax-operator"
+        "end": 2721,
+        "className": "syntax-function"
       },
       {
-        "start": 2718,
-        "end": 2726,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2727,
-        "end": 2735,
+        "start": 2722,
+        "end": 2725,
         "className": "syntax-type"
       },
       {
-        "start": 2735,
-        "end": 2736,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2736,
+        "start": 2731,
         "end": 2740,
         "className": "syntax-type"
       },
       {
-        "start": 2742,
-        "end": 2746,
+        "start": 2741,
+        "end": 2745,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2746,
+        "end": 2749,
         "className": "syntax-type"
       },
       {
-        "start": 2748,
-        "end": 2759,
-        "className": "syntax-type"
+        "start": 2755,
+        "end": 2758,
+        "className": "syntax-variable"
       },
       {
-        "start": 2788,
-        "end": 2796,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2798,
-        "end": 2804,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2804,
-        "end": 2805,
+        "start": 2759,
+        "end": 2760,
         "className": "syntax-operator"
       },
       {
-        "start": 2807,
-        "end": 2821,
-        "className": "syntax-type"
+        "start": 2761,
+        "end": 2764,
+        "className": "syntax-variable"
       },
       {
-        "start": 2832,
-        "end": 2840,
+        "start": 2766,
+        "end": 2769,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2770,
+        "end": 2771,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2772,
+        "end": 2779,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2780,
+        "end": 2783,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2789,
+        "end": 2793,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2794,
+        "end": 2795,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2796,
+        "end": 2804,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2805,
+        "end": 2809,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2815,
+        "end": 2821,
         "className": "syntax-keyword"
       },
       {
-        "start": 2841,
-        "end": 2849,
-        "className": "syntax-type"
+        "start": 2822,
+        "end": 2826,
+        "className": "syntax-function"
       },
       {
-        "start": 2849,
-        "end": 2850,
-        "className": "syntax-operator"
+        "start": 2827,
+        "end": 2841,
+        "className": "syntax-function"
       },
       {
-        "start": 2850,
-        "end": 2854,
-        "className": "syntax-type"
+        "start": 2842,
+        "end": 2856,
+        "className": "syntax-function"
       },
       {
-        "start": 2856,
+        "start": 2857,
         "end": 2860,
-        "className": "syntax-type"
+        "className": "syntax-variable"
       },
       {
         "start": 2862,
-        "end": 2873,
-        "className": "syntax-type"
+        "end": 2865,
+        "className": "syntax-variable"
       },
       {
-        "start": 2902,
-        "end": 2910,
-        "className": "syntax-type"
+        "start": 2867,
+        "end": 2870,
+        "className": "syntax-variable"
       },
       {
-        "start": 2912,
+        "start": 2889,
+        "end": 2903,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2904,
         "end": 2918,
-        "className": "syntax-type"
+        "className": "syntax-function"
       },
       {
-        "start": 2918,
-        "end": 2919,
-        "className": "syntax-operator"
+        "start": 2919,
+        "end": 2923,
+        "className": "syntax-variable"
       },
       {
-        "start": 2921,
-        "end": 2935,
-        "className": "syntax-type"
+        "start": 2925,
+        "end": 2929,
+        "className": "syntax-variable"
       },
       {
-        "start": 2935,
-        "end": 2936,
-        "className": "syntax-operator"
+        "start": 2931,
+        "end": 2934,
+        "className": "syntax-variable"
       },
       {
-        "start": 2941,
-        "end": 2949,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2949,
+        "start": 2944,
         "end": 2950,
-        "className": "syntax-operator"
+        "className": "syntax-keyword"
       },
       {
-        "start": 2950,
-        "end": 2954,
-        "className": "syntax-type"
+        "start": 2951,
+        "end": 2955,
+        "className": "syntax-function"
       },
       {
         "start": 2956,
-        "end": 2960,
-        "className": "syntax-type"
+        "end": 2970,
+        "className": "syntax-function"
       },
       {
-        "start": 2962,
-        "end": 2973,
-        "className": "syntax-type"
+        "start": 2971,
+        "end": 2974,
+        "className": "syntax-variable"
       },
       {
-        "start": 2975,
-        "end": 2983,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2985,
+        "start": 2977,
         "end": 2991,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2991,
-        "end": 2992,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2999,
-        "end": 3010,
         "className": "syntax-function"
       },
       {
-        "start": 3011,
-        "end": 3016,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3017,
-        "end": 3021,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3021,
-        "end": 3022,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3023,
-        "end": 3026,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3028,
-        "end": 3033,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3046,
-        "end": 3053,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3054,
-        "end": 3058,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3058,
-        "end": 3059,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3059,
-        "end": 3073,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3075,
-        "end": 3089,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3089,
-        "end": 3090,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3091,
-        "end": 3095,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3104,
-        "end": 3113,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3114,
-        "end": 3117,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3118,
-        "end": 3119,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3120,
-        "end": 3128,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3138,
-        "end": 3147,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3148,
-        "end": 3151,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3152,
-        "end": 3153,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3154,
-        "end": 3160,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3170,
-        "end": 3175,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3177,
-        "end": 3180,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3202,
-        "end": 3204,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3206,
-        "end": 3213,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3214,
-        "end": 3228,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3229,
-        "end": 3235,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3236,
-        "end": 3239,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3242,
-        "end": 3245,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3260,
-        "end": 3263,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3264,
-        "end": 3265,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3266,
-        "end": 3274,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3275,
-        "end": 3278,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3291,
-        "end": 3295,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3296,
-        "end": 3298,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3300,
-        "end": 3307,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3308,
-        "end": 3322,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3323,
-        "end": 3326,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3328,
-        "end": 3334,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3335,
-        "end": 3338,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3354,
-        "end": 3357,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3358,
-        "end": 3359,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3360,
-        "end": 3363,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3365,
-        "end": 3368,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3369,
-        "end": 3370,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3371,
-        "end": 3378,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3379,
-        "end": 3382,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3395,
-        "end": 3399,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3428,
-        "end": 3437,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3438,
-        "end": 3442,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3443,
-        "end": 3446,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3463,
-        "end": 3472,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3473,
-        "end": 3477,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3478,
-        "end": 3481,
-        "className": "syntax-type"
-      },
-      {
-        "start": 3498,
-        "end": 3501,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3502,
-        "end": 3503,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3504,
-        "end": 3507,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3509,
-        "end": 3512,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3513,
-        "end": 3514,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3515,
-        "end": 3522,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3523,
-        "end": 3526,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3543,
-        "end": 3547,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3548,
-        "end": 3549,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3550,
-        "end": 3558,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3559,
-        "end": 3563,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3580,
-        "end": 3586,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3587,
-        "end": 3591,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3592,
-        "end": 3606,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3607,
-        "end": 3621,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3622,
-        "end": 3625,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3627,
-        "end": 3630,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3632,
-        "end": 3635,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3665,
-        "end": 3679,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3680,
-        "end": 3694,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3695,
-        "end": 3699,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3701,
-        "end": 3705,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3707,
-        "end": 3710,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3745,
-        "end": 3751,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3752,
-        "end": 3756,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3757,
-        "end": 3771,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3772,
-        "end": 3775,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3778,
-        "end": 3792,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3793,
-        "end": 3796,
+        "start": 2992,
+        "end": 2995,
         "className": "syntax-variable"
       }
     ]
@@ -13716,719 +13716,22 @@ export const codeSnippets = [
   {
     "language": "cpp",
     "name": "cpp/libstdcxx_uninitialized_dispatch.cpp",
-    "code": "    struct __uninitialized_copy\n    {\n      template<typename _InputIterator, typename _ForwardIterator>\n        static _ForwardIterator\n        __uninit_copy(_InputIterator __first, _InputIterator __last,\n                      _ForwardIterator __result)\n        { return std::__do_uninit_copy(__first, __last, __result); }\n    };\n\n  template<>\n    struct __uninitialized_copy<true>\n    {\n      // Overload for generic iterators.\n      template<typename _InputIterator, typename _ForwardIterator>\n        static _ForwardIterator\n        __uninit_copy(_InputIterator __first, _InputIterator __last,\n                      _ForwardIterator __result)\n        {\n          if (__unwrappable_niter<_InputIterator>::__value\n                && __unwrappable_niter<_ForwardIterator>::__value)\n            {\n              __uninit_copy(std::__niter_base(__first),\n                            std::__niter_base(__last),\n                            std::__niter_base(__result));\n              std::advance(__result, std::distance(__first, __last));\n              return __result;\n            }\n          else\n            return std::__do_uninit_copy(__first, __last, __result);\n        }\n\n      // Overload for pointers.\n      template<typename _Tp, typename _Up>\n        static _Up*\n        __uninit_copy(_Tp* __first, _Tp* __last, _Up* __result)\n        {\n          // Ensure that we don't successfully memcpy in cases that should be\n          // ill-formed because is_constructible<_Up, _Tp&> is false.\n          typedef __typeof__(static_cast<_Up>(*__first)) __check\n            __attribute__((__unused__));\n\n          const ptrdiff_t __n = __last - __first;\n          if (__builtin_expect(__n > 0, true))\n            {\n              __builtin_memcpy(__result, __first, __n * sizeof(_Tp));\n              __result += __n;\n            }\n          return __result;\n        }\n    };",
+    "code": "struct __uninitialized_copy\n{\n  template<typename _InputIterator, typename _ForwardIterator>\n    static _ForwardIterator\n    __uninit_copy(_InputIterator __first, _InputIterator __last,\n                  _ForwardIterator __result)\n    { return std::__do_uninit_copy(__first, __last, __result); }\n};\n\ntemplate<>\nstruct __uninitialized_copy<true>\n{\n  // Overload for generic iterators.\n  template<typename _InputIterator, typename _ForwardIterator>\n    static _ForwardIterator\n    __uninit_copy(_InputIterator __first, _InputIterator __last,\n                  _ForwardIterator __result)\n    {\n      if (__unwrappable_niter<_InputIterator>::__value\n            && __unwrappable_niter<_ForwardIterator>::__value)\n        {\n          __uninit_copy(std::__niter_base(__first),\n                        std::__niter_base(__last),\n                        std::__niter_base(__result));\n          std::advance(__result, std::distance(__first, __last));\n          return __result;\n        }\n      else\n        return std::__do_uninit_copy(__first, __last, __result);\n    }\n\n  // Overload for pointers.\n  template<typename _Tp, typename _Up>\n    static _Up*\n    __uninit_copy(_Tp* __first, _Tp* __last, _Up* __result)\n    {\n      // Ensure that we don't successfully memcpy in cases that should be\n      // ill-formed because is_constructible<_Up, _Tp&> is false.\n      typedef __typeof__(static_cast<_Up>(*__first)) __check\n        __attribute__((__unused__));\n\n      const ptrdiff_t __n = __last - __first;\n      if (__builtin_expect(__n > 0, true))\n        {\n          __builtin_memcpy(__result, __first, __n * sizeof(_Tp));\n          __result += __n;\n        }\n      return __result;\n    }\n};",
     "spans": [
       {
-        "start": 4,
-        "end": 10,
+        "start": 0,
+        "end": 6,
         "className": "syntax-keyword"
       },
       {
-        "start": 11,
-        "end": 31,
+        "start": 7,
+        "end": 27,
         "className": "syntax-type"
       },
       {
-        "start": 44,
-        "end": 52,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 52,
-        "end": 53,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 53,
-        "end": 61,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 62,
-        "end": 76,
-        "className": "syntax-type"
-      },
-      {
-        "start": 78,
-        "end": 86,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 87,
-        "end": 103,
-        "className": "syntax-type"
-      },
-      {
-        "start": 103,
-        "end": 104,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 113,
-        "end": 119,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 120,
-        "end": 136,
-        "className": "syntax-type"
-      },
-      {
-        "start": 145,
-        "end": 158,
-        "className": "syntax-function"
-      },
-      {
-        "start": 159,
-        "end": 173,
-        "className": "syntax-type"
-      },
-      {
-        "start": 174,
-        "end": 181,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 183,
-        "end": 197,
-        "className": "syntax-type"
-      },
-      {
-        "start": 198,
-        "end": 204,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 228,
-        "end": 244,
-        "className": "syntax-type"
-      },
-      {
-        "start": 245,
-        "end": 253,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 265,
-        "end": 271,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 277,
-        "end": 293,
-        "className": "syntax-function"
-      },
-      {
-        "start": 294,
-        "end": 301,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 303,
-        "end": 309,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 311,
-        "end": 319,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 334,
-        "end": 342,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 342,
-        "end": 344,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 349,
-        "end": 355,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 356,
-        "end": 376,
-        "className": "syntax-type"
-      },
-      {
-        "start": 376,
-        "end": 377,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 381,
-        "end": 382,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 395,
-        "end": 429,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 436,
-        "end": 444,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 444,
-        "end": 445,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 445,
-        "end": 453,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 454,
-        "end": 468,
-        "className": "syntax-type"
-      },
-      {
-        "start": 470,
-        "end": 478,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 479,
-        "end": 495,
-        "className": "syntax-type"
-      },
-      {
-        "start": 495,
-        "end": 496,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 505,
-        "end": 511,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 512,
-        "end": 528,
-        "className": "syntax-type"
-      },
-      {
-        "start": 537,
-        "end": 550,
-        "className": "syntax-function"
-      },
-      {
-        "start": 551,
-        "end": 565,
-        "className": "syntax-type"
-      },
-      {
-        "start": 566,
-        "end": 573,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 575,
-        "end": 589,
-        "className": "syntax-type"
-      },
-      {
-        "start": 590,
-        "end": 596,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 620,
-        "end": 636,
-        "className": "syntax-type"
-      },
-      {
-        "start": 637,
-        "end": 645,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 667,
-        "end": 669,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 671,
-        "end": 690,
-        "className": "syntax-type"
-      },
-      {
-        "start": 690,
-        "end": 691,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 691,
-        "end": 705,
-        "className": "syntax-type"
-      },
-      {
-        "start": 705,
-        "end": 706,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 708,
-        "end": 715,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 732,
-        "end": 734,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 735,
-        "end": 754,
-        "className": "syntax-type"
-      },
-      {
-        "start": 754,
-        "end": 755,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 755,
-        "end": 771,
-        "className": "syntax-type"
-      },
-      {
-        "start": 771,
-        "end": 772,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 774,
-        "end": 781,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 811,
-        "end": 824,
-        "className": "syntax-function"
-      },
-      {
-        "start": 830,
-        "end": 842,
-        "className": "syntax-function"
-      },
-      {
-        "start": 843,
-        "end": 850,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 886,
-        "end": 898,
-        "className": "syntax-function"
-      },
-      {
-        "start": 899,
-        "end": 905,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 941,
-        "end": 953,
-        "className": "syntax-function"
-      },
-      {
-        "start": 954,
-        "end": 962,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 985,
-        "end": 992,
-        "className": "syntax-function"
-      },
-      {
-        "start": 993,
-        "end": 1001,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1008,
-        "end": 1016,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1017,
-        "end": 1024,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1026,
-        "end": 1032,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1050,
-        "end": 1056,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1057,
-        "end": 1065,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1091,
-        "end": 1095,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1108,
-        "end": 1114,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1120,
-        "end": 1136,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1137,
-        "end": 1144,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1146,
-        "end": 1152,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1154,
-        "end": 1162,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1182,
-        "end": 1207,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1214,
-        "end": 1222,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1222,
-        "end": 1223,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1223,
-        "end": 1231,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1232,
-        "end": 1235,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1237,
-        "end": 1245,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1246,
-        "end": 1249,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1249,
-        "end": 1250,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1259,
-        "end": 1265,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1266,
-        "end": 1269,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1269,
-        "end": 1270,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1279,
-        "end": 1292,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1293,
-        "end": 1296,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1296,
-        "end": 1297,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1298,
-        "end": 1305,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1307,
-        "end": 1310,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1310,
-        "end": 1311,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1312,
-        "end": 1318,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1320,
-        "end": 1323,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1323,
-        "end": 1324,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1325,
-        "end": 1333,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1355,
-        "end": 1422,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1433,
-        "end": 1492,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1503,
-        "end": 1510,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1511,
-        "end": 1521,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1522,
-        "end": 1533,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1533,
-        "end": 1534,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1534,
-        "end": 1537,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1537,
-        "end": 1538,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1539,
-        "end": 1540,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1540,
-        "end": 1547,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1550,
-        "end": 1557,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1585,
-        "end": 1595,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1610,
-        "end": 1615,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1616,
-        "end": 1625,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1626,
-        "end": 1629,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1630,
-        "end": 1631,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1632,
-        "end": 1638,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1639,
-        "end": 1640,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1641,
-        "end": 1648,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1660,
-        "end": 1662,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1664,
-        "end": 1680,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1681,
-        "end": 1684,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1685,
-        "end": 1686,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1687,
-        "end": 1688,
-        "className": "syntax-number"
-      },
-      {
-        "start": 1725,
-        "end": 1741,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1742,
-        "end": 1750,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1752,
-        "end": 1759,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1761,
-        "end": 1764,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1765,
-        "end": 1766,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1767,
-        "end": 1773,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1774,
-        "end": 1777,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1795,
-        "end": 1803,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1804,
-        "end": 1806,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1807,
-        "end": 1810,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1836,
-        "end": 1842,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1843,
-        "end": 1851,
-        "className": "syntax-variable"
-      }
-    ]
-  },
-  {
-    "language": "cpp",
-    "name": "cpp/libstdcxx_vector_assign_aux.cpp",
-    "code": "  template<typename _Tp, typename _Alloc>\n    _GLIBCXX20_CONSTEXPR\n    void\n    vector<_Tp, _Alloc>::\n    _M_fill_assign(size_t __n, const value_type& __val)\n    {\n      const size_type __sz = size();\n      if (__n > capacity())\n        {\n          if (__n <= __sz)\n            __builtin_unreachable();\n          vector __tmp(__n, __val, _M_get_Tp_allocator());\n          __tmp._M_impl._M_swap_data(this->_M_impl);\n        }\n      else if (__n > __sz)\n        {\n          std::fill(begin(), end(), __val);\n          const size_type __add = __n - __sz;\n          _GLIBCXX_ASAN_ANNOTATE_GROW(__add);\n          this->_M_impl._M_finish =\n            std::__uninitialized_fill_n_a(this->_M_impl._M_finish,\n                                          __add, __val, _M_get_Tp_allocator());\n          _GLIBCXX_ASAN_ANNOTATE_GREW(__add);\n        }\n      else\n        _M_erase_at_end(std::fill_n(this->_M_impl._M_start, __n, __val));\n    }\n\n  template<typename _Tp, typename _Alloc>\n    template<typename _InputIterator>\n      _GLIBCXX20_CONSTEXPR\n      void\n      vector<_Tp, _Alloc>::\n      _M_assign_aux(_InputIterator __first, _InputIterator __last,\n                    std::input_iterator_tag)\n      {\n        pointer __cur(this->_M_impl._M_start);\n        for (; __first != __last && __cur != this->_M_impl._M_finish;\n             ++__cur, (void)++__first)\n          *__cur = *__first;\n        if (__first == __last)\n          _M_erase_at_end(__cur);\n        else\n          _M_range_insert(end(), __first, __last,\n                          std::__iterator_category(__first));\n      }\n\n  template<typename _Tp, typename _Alloc>\n    template<typename _ForwardIterator>\n      _GLIBCXX20_CONSTEXPR\n      void\n      vector<_Tp, _Alloc>::\n      _M_assign_aux(_ForwardIterator __first, _ForwardIterator __last,\n                    std::forward_iterator_tag)\n      {\n        const size_type __sz = size();\n        const size_type __len = std::distance(__first, __last);\n\n        if (__len > capacity())\n          {\n            if (__len <= __sz)\n              __builtin_unreachable();\n\n            _S_check_init_len(__len, _M_get_Tp_allocator());\n            pointer __tmp(_M_allocate_and_copy(__len, __first, __last));\n            std::_Destroy(this->_M_impl._M_start, this->_M_impl._M_finish,\n                          _M_get_Tp_allocator());\n            _GLIBCXX_ASAN_ANNOTATE_REINIT;\n            _M_deallocate(this->_M_impl._M_start,\n                          this->_M_impl._M_end_of_storage\n                          - this->_M_impl._M_start);\n            this->_M_impl._M_start = __tmp;\n            this->_M_impl._M_finish = this->_M_impl._M_start + __len;\n            this->_M_impl._M_end_of_storage = this->_M_impl._M_finish;\n          }\n        else if (__sz >= __len)\n          _M_erase_at_end(std::copy(__first, __last, this->_M_impl._M_start));\n        else",
-    "spans": [
-      {
-        "start": 2,
-        "end": 10,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 10,
-        "end": 11,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 11,
-        "end": 19,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 20,
-        "end": 23,
-        "className": "syntax-type"
-      },
-      {
-        "start": 25,
-        "end": 33,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 34,
+        "start": 32,
         "end": 40,
-        "className": "syntax-type"
+        "className": "syntax-keyword"
       },
       {
         "start": 40,
@@ -14436,1371 +13739,716 @@ export const codeSnippets = [
         "className": "syntax-operator"
       },
       {
-        "start": 46,
-        "end": 66,
-        "className": "syntax-type"
-      },
-      {
-        "start": 71,
-        "end": 75,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 80,
-        "end": 86,
-        "className": "syntax-type"
-      },
-      {
-        "start": 86,
-        "end": 87,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 87,
-        "end": 90,
-        "className": "syntax-type"
-      },
-      {
-        "start": 92,
-        "end": 98,
-        "className": "syntax-type"
-      },
-      {
-        "start": 98,
-        "end": 99,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 106,
-        "end": 120,
-        "className": "syntax-function"
-      },
-      {
-        "start": 121,
-        "end": 127,
-        "className": "syntax-type"
-      },
-      {
-        "start": 128,
-        "end": 131,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 133,
-        "end": 138,
+        "start": 41,
+        "end": 49,
         "className": "syntax-keyword"
+      },
+      {
+        "start": 50,
+        "end": 64,
+        "className": "syntax-type"
+      },
+      {
+        "start": 66,
+        "end": 74,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 75,
+        "end": 91,
+        "className": "syntax-type"
+      },
+      {
+        "start": 91,
+        "end": 92,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 97,
+        "end": 103,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 104,
+        "end": 120,
+        "className": "syntax-type"
+      },
+      {
+        "start": 125,
+        "end": 138,
+        "className": "syntax-function"
       },
       {
         "start": 139,
-        "end": 149,
+        "end": 153,
         "className": "syntax-type"
       },
       {
-        "start": 149,
-        "end": 150,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 151,
-        "end": 156,
+        "start": 154,
+        "end": 161,
         "className": "syntax-variable"
       },
       {
-        "start": 170,
-        "end": 175,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 176,
-        "end": 185,
+        "start": 163,
+        "end": 177,
         "className": "syntax-type"
       },
       {
-        "start": 186,
-        "end": 190,
+        "start": 178,
+        "end": 184,
         "className": "syntax-variable"
       },
       {
-        "start": 191,
-        "end": 192,
-        "className": "syntax-operator"
+        "start": 204,
+        "end": 220,
+        "className": "syntax-type"
       },
       {
-        "start": 193,
-        "end": 197,
-        "className": "syntax-function"
+        "start": 221,
+        "end": 229,
+        "className": "syntax-variable"
       },
       {
-        "start": 207,
-        "end": 209,
+        "start": 237,
+        "end": 243,
         "className": "syntax-keyword"
-      },
-      {
-        "start": 211,
-        "end": 214,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 215,
-        "end": 216,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 217,
-        "end": 225,
-        "className": "syntax-function"
       },
       {
         "start": 249,
-        "end": 251,
+        "end": 265,
+        "className": "syntax-function"
+      },
+      {
+        "start": 266,
+        "end": 273,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 275,
+        "end": 281,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 283,
+        "end": 291,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 300,
+        "end": 308,
         "className": "syntax-keyword"
       },
       {
-        "start": 253,
-        "end": 256,
-        "className": "syntax-variable"
+        "start": 308,
+        "end": 310,
+        "className": "syntax-operator"
       },
       {
-        "start": 260,
-        "end": 264,
-        "className": "syntax-variable"
+        "start": 311,
+        "end": 317,
+        "className": "syntax-keyword"
       },
       {
-        "start": 278,
-        "end": 299,
-        "className": "syntax-function"
-      },
-      {
-        "start": 313,
-        "end": 319,
-        "className": "syntax-type"
-      },
-      {
-        "start": 320,
-        "end": 325,
-        "className": "syntax-function"
-      },
-      {
-        "start": 326,
-        "end": 329,
-        "className": "syntax-type"
-      },
-      {
-        "start": 331,
-        "end": 336,
+        "start": 318,
+        "end": 338,
         "className": "syntax-type"
       },
       {
         "start": 338,
-        "end": 357,
-        "className": "syntax-type"
+        "end": 339,
+        "className": "syntax-operator"
       },
       {
-        "start": 372,
-        "end": 377,
-        "className": "syntax-variable"
+        "start": 343,
+        "end": 344,
+        "className": "syntax-operator"
       },
       {
-        "start": 378,
-        "end": 385,
-        "className": "syntax-property"
+        "start": 349,
+        "end": 383,
+        "className": "syntax-comment"
       },
       {
         "start": 386,
-        "end": 398,
-        "className": "syntax-function"
+        "end": 394,
+        "className": "syntax-keyword"
       },
       {
-        "start": 399,
+        "start": 394,
+        "end": 395,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 395,
         "end": 403,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 403,
-        "end": 405,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 405,
-        "end": 412,
-        "className": "syntax-property"
-      },
-      {
-        "start": 431,
-        "end": 435,
         "className": "syntax-keyword"
       },
       {
-        "start": 436,
-        "end": 438,
+        "start": 404,
+        "end": 418,
+        "className": "syntax-type"
+      },
+      {
+        "start": 420,
+        "end": 428,
         "className": "syntax-keyword"
       },
       {
-        "start": 440,
-        "end": 443,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 444,
+        "start": 429,
         "end": 445,
+        "className": "syntax-type"
+      },
+      {
+        "start": 445,
+        "end": 446,
         "className": "syntax-operator"
       },
       {
-        "start": 446,
-        "end": 450,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 477,
-        "end": 481,
-        "className": "syntax-function"
-      },
-      {
-        "start": 482,
-        "end": 487,
-        "className": "syntax-function"
-      },
-      {
-        "start": 491,
-        "end": 494,
-        "className": "syntax-function"
-      },
-      {
-        "start": 498,
-        "end": 503,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 516,
-        "end": 521,
+        "start": 451,
+        "end": 457,
         "className": "syntax-keyword"
       },
       {
-        "start": 522,
+        "start": 458,
+        "end": 474,
+        "className": "syntax-type"
+      },
+      {
+        "start": 479,
+        "end": 492,
+        "className": "syntax-function"
+      },
+      {
+        "start": 493,
+        "end": 507,
+        "className": "syntax-type"
+      },
+      {
+        "start": 508,
+        "end": 515,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 517,
         "end": 531,
         "className": "syntax-type"
       },
       {
         "start": 532,
-        "end": 537,
+        "end": 538,
         "className": "syntax-variable"
       },
       {
-        "start": 538,
-        "end": 539,
-        "className": "syntax-operator"
+        "start": 558,
+        "end": 574,
+        "className": "syntax-type"
       },
       {
-        "start": 540,
-        "end": 543,
+        "start": 575,
+        "end": 583,
         "className": "syntax-variable"
       },
       {
-        "start": 544,
-        "end": 545,
-        "className": "syntax-operator"
+        "start": 597,
+        "end": 599,
+        "className": "syntax-keyword"
       },
       {
-        "start": 546,
-        "end": 550,
-        "className": "syntax-variable"
+        "start": 601,
+        "end": 620,
+        "className": "syntax-type"
       },
       {
-        "start": 562,
-        "end": 589,
-        "className": "syntax-function"
-      },
-      {
-        "start": 590,
-        "end": 595,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 608,
-        "end": 612,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 612,
-        "end": 614,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 614,
+        "start": 620,
         "end": 621,
-        "className": "syntax-property"
-      },
-      {
-        "start": 622,
-        "end": 631,
-        "className": "syntax-property"
-      },
-      {
-        "start": 632,
-        "end": 633,
         "className": "syntax-operator"
       },
       {
-        "start": 651,
-        "end": 675,
-        "className": "syntax-function"
+        "start": 621,
+        "end": 635,
+        "className": "syntax-type"
       },
       {
-        "start": 676,
-        "end": 680,
+        "start": 635,
+        "end": 636,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 638,
+        "end": 645,
         "className": "syntax-variable"
+      },
+      {
+        "start": 658,
+        "end": 660,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 661,
+        "end": 680,
+        "className": "syntax-type"
       },
       {
         "start": 680,
-        "end": 682,
+        "end": 681,
         "className": "syntax-operator"
       },
       {
-        "start": 682,
-        "end": 689,
-        "className": "syntax-property"
+        "start": 681,
+        "end": 697,
+        "className": "syntax-type"
       },
       {
-        "start": 690,
-        "end": 699,
-        "className": "syntax-property"
+        "start": 697,
+        "end": 698,
+        "className": "syntax-operator"
       },
       {
-        "start": 743,
-        "end": 748,
+        "start": 700,
+        "end": 707,
         "className": "syntax-variable"
       },
       {
-        "start": 750,
-        "end": 755,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 757,
-        "end": 776,
+        "start": 729,
+        "end": 742,
         "className": "syntax-function"
       },
       {
-        "start": 791,
-        "end": 818,
+        "start": 748,
+        "end": 760,
         "className": "syntax-function"
       },
       {
-        "start": 819,
-        "end": 824,
+        "start": 761,
+        "end": 768,
         "className": "syntax-variable"
       },
       {
-        "start": 843,
-        "end": 847,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 856,
-        "end": 871,
+        "start": 800,
+        "end": 812,
         "className": "syntax-function"
       },
       {
-        "start": 877,
-        "end": 883,
+        "start": 813,
+        "end": 819,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 851,
+        "end": 863,
         "className": "syntax-function"
       },
       {
-        "start": 884,
-        "end": 888,
+        "start": 864,
+        "end": 872,
         "className": "syntax-variable"
       },
       {
-        "start": 888,
-        "end": 890,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 890,
-        "end": 897,
-        "className": "syntax-property"
-      },
-      {
-        "start": 898,
-        "end": 906,
-        "className": "syntax-property"
-      },
-      {
-        "start": 908,
-        "end": 911,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 913,
-        "end": 918,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 931,
-        "end": 939,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 939,
-        "end": 940,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 940,
-        "end": 948,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 949,
-        "end": 952,
-        "className": "syntax-type"
-      },
-      {
-        "start": 954,
-        "end": 962,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 963,
-        "end": 969,
-        "className": "syntax-type"
-      },
-      {
-        "start": 969,
-        "end": 970,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 975,
-        "end": 983,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 983,
-        "end": 984,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 984,
-        "end": 992,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 993,
-        "end": 1007,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1007,
-        "end": 1008,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1015,
-        "end": 1035,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1042,
-        "end": 1046,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1053,
-        "end": 1059,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1059,
-        "end": 1060,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1060,
-        "end": 1063,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1065,
-        "end": 1071,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1071,
-        "end": 1072,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1081,
-        "end": 1094,
+        "start": 891,
+        "end": 898,
         "className": "syntax-function"
       },
       {
-        "start": 1095,
+        "start": 899,
+        "end": 907,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 914,
+        "end": 922,
+        "className": "syntax-function"
+      },
+      {
+        "start": 923,
+        "end": 930,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 932,
+        "end": 938,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 952,
+        "end": 958,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 959,
+        "end": 967,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 985,
+        "end": 989,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 998,
+        "end": 1004,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1010,
+        "end": 1026,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1027,
+        "end": 1034,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1036,
+        "end": 1042,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1044,
+        "end": 1052,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1064,
+        "end": 1089,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 1092,
+        "end": 1100,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1100,
+        "end": 1101,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1101,
         "end": 1109,
-        "className": "syntax-type"
+        "className": "syntax-keyword"
       },
       {
         "start": 1110,
-        "end": 1117,
+        "end": 1113,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1115,
+        "end": 1123,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1124,
+        "end": 1127,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1127,
+        "end": 1128,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1133,
+        "end": 1139,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1140,
+        "end": 1143,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1143,
+        "end": 1144,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1149,
+        "end": 1162,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1163,
+        "end": 1166,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1166,
+        "end": 1167,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1168,
+        "end": 1175,
         "className": "syntax-variable"
       },
       {
-        "start": 1119,
-        "end": 1133,
+        "start": 1177,
+        "end": 1180,
         "className": "syntax-type"
       },
       {
-        "start": 1134,
-        "end": 1140,
+        "start": 1180,
+        "end": 1181,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1182,
+        "end": 1188,
         "className": "syntax-variable"
       },
       {
-        "start": 1167,
-        "end": 1185,
+        "start": 1190,
+        "end": 1193,
         "className": "syntax-type"
       },
       {
-        "start": 1203,
-        "end": 1210,
-        "className": "syntax-type"
+        "start": 1193,
+        "end": 1194,
+        "className": "syntax-operator"
       },
       {
-        "start": 1211,
-        "end": 1216,
+        "start": 1195,
+        "end": 1203,
         "className": "syntax-variable"
       },
       {
         "start": 1217,
-        "end": 1221,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1221,
-        "end": 1223,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1223,
-        "end": 1230,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1231,
-        "end": 1239,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1250,
-        "end": 1253,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1257,
-        "end": 1264,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1265,
-        "end": 1267,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1268,
-        "end": 1274,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1275,
-        "end": 1277,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1278,
-        "end": 1283,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1284,
-        "end": 1286,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1287,
-        "end": 1291,
-        "className": "syntax-variable"
+        "end": 1284,
+        "className": "syntax-comment"
       },
       {
         "start": 1291,
-        "end": 1293,
-        "className": "syntax-operator"
+        "end": 1350,
+        "className": "syntax-comment"
       },
       {
-        "start": 1293,
-        "end": 1300,
-        "className": "syntax-property"
+        "start": 1357,
+        "end": 1364,
+        "className": "syntax-keyword"
       },
       {
-        "start": 1301,
-        "end": 1310,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1325,
-        "end": 1327,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1327,
-        "end": 1332,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1335,
-        "end": 1339,
+        "start": 1365,
+        "end": 1375,
         "className": "syntax-type"
       },
       {
-        "start": 1340,
-        "end": 1342,
+        "start": 1376,
+        "end": 1387,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1387,
+        "end": 1388,
         "className": "syntax-operator"
-      },
-      {
-        "start": 1342,
-        "end": 1349,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1361,
-        "end": 1362,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1362,
-        "end": 1367,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1368,
-        "end": 1369,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1370,
-        "end": 1371,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1371,
-        "end": 1378,
-        "className": "syntax-variable"
       },
       {
         "start": 1388,
-        "end": 1390,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1392,
-        "end": 1399,
+        "end": 1391,
         "className": "syntax-variable"
       },
       {
-        "start": 1400,
-        "end": 1402,
+        "start": 1391,
+        "end": 1392,
         "className": "syntax-operator"
       },
       {
-        "start": 1403,
-        "end": 1409,
+        "start": 1393,
+        "end": 1394,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1394,
+        "end": 1401,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1404,
+        "end": 1411,
         "className": "syntax-variable"
       },
       {
-        "start": 1421,
-        "end": 1436,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1437,
-        "end": 1442,
+        "start": 1435,
+        "end": 1445,
         "className": "syntax-variable"
       },
       {
-        "start": 1453,
-        "end": 1457,
+        "start": 1456,
+        "end": 1461,
         "className": "syntax-keyword"
       },
       {
-        "start": 1468,
-        "end": 1483,
-        "className": "syntax-function"
+        "start": 1462,
+        "end": 1471,
+        "className": "syntax-type"
       },
       {
-        "start": 1484,
-        "end": 1487,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1491,
-        "end": 1498,
+        "start": 1472,
+        "end": 1475,
         "className": "syntax-variable"
       },
       {
-        "start": 1500,
-        "end": 1506,
+        "start": 1476,
+        "end": 1477,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1478,
+        "end": 1484,
         "className": "syntax-variable"
       },
       {
-        "start": 1539,
-        "end": 1558,
+        "start": 1485,
+        "end": 1486,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1487,
+        "end": 1494,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1502,
+        "end": 1504,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1506,
+        "end": 1522,
         "className": "syntax-function"
+      },
+      {
+        "start": 1523,
+        "end": 1526,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1527,
+        "end": 1528,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1529,
+        "end": 1530,
+        "className": "syntax-number"
       },
       {
         "start": 1559,
-        "end": 1566,
+        "end": 1575,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1576,
+        "end": 1584,
         "className": "syntax-variable"
       },
       {
-        "start": 1581,
-        "end": 1589,
-        "className": "syntax-keyword"
+        "start": 1586,
+        "end": 1593,
+        "className": "syntax-variable"
       },
       {
-        "start": 1589,
-        "end": 1590,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1590,
+        "start": 1595,
         "end": 1598,
-        "className": "syntax-keyword"
+        "className": "syntax-variable"
       },
       {
         "start": 1599,
-        "end": 1602,
-        "className": "syntax-type"
+        "end": 1600,
+        "className": "syntax-operator"
       },
       {
-        "start": 1604,
-        "end": 1612,
+        "start": 1601,
+        "end": 1607,
         "className": "syntax-keyword"
       },
       {
-        "start": 1613,
-        "end": 1619,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1619,
-        "end": 1620,
-        "className": "syntax-operator"
+        "start": 1608,
+        "end": 1611,
+        "className": "syntax-variable"
       },
       {
         "start": 1625,
         "end": 1633,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1633,
-        "end": 1634,
-        "className": "syntax-operator"
+        "className": "syntax-variable"
       },
       {
         "start": 1634,
-        "end": 1642,
+        "end": 1636,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1637,
+        "end": 1640,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1658,
+        "end": 1664,
         "className": "syntax-keyword"
       },
       {
-        "start": 1643,
-        "end": 1659,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1659,
-        "end": 1660,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1667,
-        "end": 1687,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1694,
-        "end": 1698,
+        "start": 1665,
+        "end": 1673,
         "className": "syntax-variable"
-      },
-      {
-        "start": 1705,
-        "end": 1711,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1711,
-        "end": 1712,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1712,
-        "end": 1715,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1717,
-        "end": 1723,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1723,
-        "end": 1724,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1733,
-        "end": 1746,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1747,
-        "end": 1763,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1764,
-        "end": 1771,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1773,
-        "end": 1789,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1790,
-        "end": 1796,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1823,
-        "end": 1843,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1861,
-        "end": 1866,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1867,
-        "end": 1876,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1877,
-        "end": 1881,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1882,
-        "end": 1883,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1884,
-        "end": 1888,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1900,
-        "end": 1905,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1906,
-        "end": 1915,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1916,
-        "end": 1921,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1922,
-        "end": 1923,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1929,
-        "end": 1937,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1938,
-        "end": 1945,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1947,
-        "end": 1953,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1965,
-        "end": 1967,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1969,
-        "end": 1974,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1975,
-        "end": 1976,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1977,
-        "end": 1985,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2013,
-        "end": 2015,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2017,
-        "end": 2022,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2026,
-        "end": 2030,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2046,
-        "end": 2067,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2084,
-        "end": 2101,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2102,
-        "end": 2107,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2109,
-        "end": 2128,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2145,
-        "end": 2152,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2153,
-        "end": 2158,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2159,
-        "end": 2179,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2180,
-        "end": 2185,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2187,
-        "end": 2194,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2196,
-        "end": 2202,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2223,
-        "end": 2231,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2232,
-        "end": 2236,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2236,
-        "end": 2238,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2238,
-        "end": 2245,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2246,
-        "end": 2254,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2256,
-        "end": 2260,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2260,
-        "end": 2262,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2262,
-        "end": 2269,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2270,
-        "end": 2279,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2307,
-        "end": 2326,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2343,
-        "end": 2372,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2386,
-        "end": 2399,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2400,
-        "end": 2404,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2404,
-        "end": 2406,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2406,
-        "end": 2413,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2414,
-        "end": 2422,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2450,
-        "end": 2454,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2454,
-        "end": 2456,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2456,
-        "end": 2463,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2464,
-        "end": 2481,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2508,
-        "end": 2509,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2510,
-        "end": 2514,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2514,
-        "end": 2516,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2516,
-        "end": 2523,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2524,
-        "end": 2532,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2547,
-        "end": 2551,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2551,
-        "end": 2553,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2553,
-        "end": 2560,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2561,
-        "end": 2569,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2570,
-        "end": 2571,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2572,
-        "end": 2577,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2591,
-        "end": 2595,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2595,
-        "end": 2597,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2597,
-        "end": 2604,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2605,
-        "end": 2614,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2615,
-        "end": 2616,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2617,
-        "end": 2621,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2621,
-        "end": 2623,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2623,
-        "end": 2630,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2631,
-        "end": 2639,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2640,
-        "end": 2641,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2642,
-        "end": 2647,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2661,
-        "end": 2665,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2665,
-        "end": 2667,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2667,
-        "end": 2674,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2675,
-        "end": 2692,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2693,
-        "end": 2694,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2695,
-        "end": 2699,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2699,
-        "end": 2701,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2701,
-        "end": 2708,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2709,
-        "end": 2718,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2740,
-        "end": 2744,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2745,
-        "end": 2747,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2749,
-        "end": 2753,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2757,
-        "end": 2762,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2774,
-        "end": 2789,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2795,
-        "end": 2799,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2800,
-        "end": 2807,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2809,
-        "end": 2815,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2817,
-        "end": 2821,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2821,
-        "end": 2823,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2823,
-        "end": 2830,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2831,
-        "end": 2839,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2851,
-        "end": 2855,
-        "className": "syntax-keyword"
       }
     ]
   },
   {
     "language": "cpp",
-    "name": "cpp/libstdcxx_vector_erase_assign.cpp",
-    "code": "    _GLIBCXX20_CONSTEXPR\n    typename vector<_Tp, _Alloc>::iterator\n    vector<_Tp, _Alloc>::\n    _M_erase(iterator __position)\n    {\n      if (__position + 1 != end())\n        _GLIBCXX_MOVE3(__position + 1, end(), __position);\n      --this->_M_impl._M_finish;\n      _Alloc_traits::destroy(this->_M_impl, this->_M_impl._M_finish);\n      _GLIBCXX_ASAN_ANNOTATE_SHRINK(1);\n      return __position;\n    }\n\n  template<typename _Tp, typename _Alloc>\n    _GLIBCXX20_CONSTEXPR\n    typename vector<_Tp, _Alloc>::iterator\n    vector<_Tp, _Alloc>::\n    _M_erase(iterator __first, iterator __last)\n    {\n      if (__first != __last)\n        {\n          if (__last != end())\n            _GLIBCXX_MOVE3(__last, end(), __first);\n          _M_erase_at_end(__first.base() + (end() - __last));\n        }\n      return __first;\n    }\n\n  template<typename _Tp, typename _Alloc>\n    _GLIBCXX20_CONSTEXPR\n    vector<_Tp, _Alloc>&\n    vector<_Tp, _Alloc>::\n    operator=(const vector<_Tp, _Alloc>& __x)\n    {\n      if (std::__addressof(__x) != this)\n        {\n          _GLIBCXX_ASAN_ANNOTATE_REINIT;\n#if __cplusplus >= 201103L\n          if (_Alloc_traits::_S_propagate_on_copy_assign())\n            {\n              if (!_Alloc_traits::_S_always_equal()\n                  && _M_get_Tp_allocator() != __x._M_get_Tp_allocator())\n                {\n                  // replacement allocator cannot free existing storage\n                  this->clear();\n                  _M_deallocate(this->_M_impl._M_start,\n                                this->_M_impl._M_end_of_storage\n                                - this->_M_impl._M_start);\n                  this->_M_impl._M_start = nullptr;\n                  this->_M_impl._M_finish = nullptr;\n                  this->_M_impl._M_end_of_storage = nullptr;\n                }\n              std::__alloc_on_copy(_M_get_Tp_allocator(),\n                                   __x._M_get_Tp_allocator());\n            }\n#endif\n          const size_type __xlen = __x.size();\n          if (__xlen > capacity())\n            {\n              pointer __tmp = _M_allocate_and_copy(__xlen, __x.begin(),\n                                                   __x.end());\n              std::_Destroy(this->_M_impl._M_start, this->_M_impl._M_finish,\n                            _M_get_Tp_allocator());\n              _M_deallocate(this->_M_impl._M_start,\n                            this->_M_impl._M_end_of_storage\n                            - this->_M_impl._M_start);\n              this->_M_impl._M_start = __tmp;\n              this->_M_impl._M_end_of_storage = this->_M_impl._M_start + __xlen;\n            }\n          else if (size() >= __xlen)\n            {\n              std::_Destroy(std::copy(__x.begin(), __x.end(), begin()),\n                            end(), _M_get_Tp_allocator());\n            }\n          else\n            {\n              std::copy(__x._M_impl._M_start, __x._M_impl._M_start + size(),\n                        this->_M_impl._M_start);\n              std::__uninitialized_copy_a(__x._M_impl._M_start + size(),\n                                          __x._M_impl._M_finish,\n                                          this->_M_impl._M_finish,\n                                          _M_get_Tp_allocator());\n            }\n          this->_M_impl._M_finish = this->_M_impl._M_start + __xlen;\n        }\n      return *this;\n    }",
+    "name": "cpp/libstdcxx_vector_assign_aux.cpp",
+    "code": "template<typename _Tp, typename _Alloc>\n  _GLIBCXX20_CONSTEXPR\n  void\n  vector<_Tp, _Alloc>::\n  _M_fill_assign(size_t __n, const value_type& __val)\n  {\n    const size_type __sz = size();\n    if (__n > capacity())\n      {\n        if (__n <= __sz)\n          __builtin_unreachable();\n        vector __tmp(__n, __val, _M_get_Tp_allocator());\n        __tmp._M_impl._M_swap_data(this->_M_impl);\n      }\n    else if (__n > __sz)\n      {\n        std::fill(begin(), end(), __val);\n        const size_type __add = __n - __sz;\n        _GLIBCXX_ASAN_ANNOTATE_GROW(__add);\n        this->_M_impl._M_finish =\n          std::__uninitialized_fill_n_a(this->_M_impl._M_finish,\n                                        __add, __val, _M_get_Tp_allocator());\n        _GLIBCXX_ASAN_ANNOTATE_GREW(__add);\n      }\n    else\n      _M_erase_at_end(std::fill_n(this->_M_impl._M_start, __n, __val));\n  }\n\ntemplate<typename _Tp, typename _Alloc>\n  template<typename _InputIterator>\n    _GLIBCXX20_CONSTEXPR\n    void\n    vector<_Tp, _Alloc>::\n    _M_assign_aux(_InputIterator __first, _InputIterator __last,\n                  std::input_iterator_tag)\n    {\n      pointer __cur(this->_M_impl._M_start);\n      for (; __first != __last && __cur != this->_M_impl._M_finish;\n           ++__cur, (void)++__first)\n        *__cur = *__first;\n      if (__first == __last)\n        _M_erase_at_end(__cur);\n      else\n        _M_range_insert(end(), __first, __last,\n                        std::__iterator_category(__first));\n    }\n\ntemplate<typename _Tp, typename _Alloc>\n  template<typename _ForwardIterator>\n    _GLIBCXX20_CONSTEXPR\n    void\n    vector<_Tp, _Alloc>::\n    _M_assign_aux(_ForwardIterator __first, _ForwardIterator __last,\n                  std::forward_iterator_tag)\n    {\n      const size_type __sz = size();\n      const size_type __len = std::distance(__first, __last);\n\n      if (__len > capacity())\n        {\n          if (__len <= __sz)\n            __builtin_unreachable();\n\n          _S_check_init_len(__len, _M_get_Tp_allocator());\n          pointer __tmp(_M_allocate_and_copy(__len, __first, __last));\n          std::_Destroy(this->_M_impl._M_start, this->_M_impl._M_finish,\n                        _M_get_Tp_allocator());\n          _GLIBCXX_ASAN_ANNOTATE_REINIT;\n          _M_deallocate(this->_M_impl._M_start,\n                        this->_M_impl._M_end_of_storage\n                        - this->_M_impl._M_start);\n          this->_M_impl._M_start = __tmp;\n          this->_M_impl._M_finish = this->_M_impl._M_start + __len;\n          this->_M_impl._M_end_of_storage = this->_M_impl._M_finish;\n        }\n      else if (__sz >= __len)\n        _M_erase_at_end(std::copy(__first, __last, this->_M_impl._M_start));\n      else",
     "spans": [
       {
-        "start": 4,
-        "end": 24,
+        "start": 0,
+        "end": 8,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 8,
+        "end": 9,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 9,
+        "end": 17,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 18,
+        "end": 21,
         "className": "syntax-type"
       },
       {
-        "start": 29,
-        "end": 37,
+        "start": 23,
+        "end": 31,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 32,
+        "end": 38,
         "className": "syntax-type"
       },
       {
         "start": 38,
-        "end": 44,
+        "end": 39,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 42,
+        "end": 62,
+        "className": "syntax-type"
+      },
+      {
+        "start": 65,
+        "end": 69,
         "className": "syntax-variable"
-      },
-      {
-        "start": 44,
-        "end": 45,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 45,
-        "end": 48,
-        "className": "syntax-type"
-      },
-      {
-        "start": 50,
-        "end": 56,
-        "className": "syntax-type"
-      },
-      {
-        "start": 56,
-        "end": 57,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 59,
-        "end": 67,
-        "className": "syntax-type"
       },
       {
         "start": 72,
         "end": 78,
-        "className": "syntax-variable"
+        "className": "syntax-type"
       },
       {
         "start": 78,
@@ -15823,189 +14471,1576 @@ export const codeSnippets = [
         "className": "syntax-operator"
       },
       {
-        "start": 98,
-        "end": 106,
-        "className": "syntax-variable"
+        "start": 96,
+        "end": 110,
+        "className": "syntax-function"
       },
       {
-        "start": 107,
-        "end": 115,
+        "start": 111,
+        "end": 117,
         "className": "syntax-type"
       },
       {
-        "start": 116,
-        "end": 126,
+        "start": 118,
+        "end": 121,
         "className": "syntax-variable"
       },
       {
-        "start": 140,
-        "end": 142,
+        "start": 123,
+        "end": 128,
         "className": "syntax-keyword"
       },
       {
-        "start": 144,
-        "end": 154,
+        "start": 129,
+        "end": 139,
+        "className": "syntax-type"
+      },
+      {
+        "start": 139,
+        "end": 140,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 141,
+        "end": 146,
         "className": "syntax-variable"
       },
       {
-        "start": 155,
-        "end": 156,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 157,
-        "end": 158,
-        "className": "syntax-number"
-      },
-      {
-        "start": 159,
+        "start": 156,
         "end": 161,
-        "className": "syntax-operator"
+        "className": "syntax-keyword"
       },
       {
         "start": 162,
-        "end": 165,
-        "className": "syntax-function"
+        "end": 171,
+        "className": "syntax-type"
+      },
+      {
+        "start": 172,
+        "end": 176,
+        "className": "syntax-variable"
       },
       {
         "start": 177,
-        "end": 191,
-        "className": "syntax-function"
-      },
-      {
-        "start": 192,
-        "end": 202,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 203,
-        "end": 204,
+        "end": 178,
         "className": "syntax-operator"
       },
       {
-        "start": 205,
-        "end": 206,
-        "className": "syntax-number"
-      },
-      {
-        "start": 208,
-        "end": 211,
+        "start": 179,
+        "end": 183,
         "className": "syntax-function"
       },
       {
-        "start": 215,
-        "end": 225,
+        "start": 191,
+        "end": 193,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 195,
+        "end": 198,
         "className": "syntax-variable"
       },
       {
-        "start": 234,
+        "start": 199,
+        "end": 200,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 201,
+        "end": 209,
+        "className": "syntax-function"
+      },
+      {
+        "start": 229,
+        "end": 231,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 233,
         "end": 236,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 236,
-        "end": 240,
         "className": "syntax-variable"
       },
       {
         "start": 240,
-        "end": 242,
-        "className": "syntax-operator"
+        "end": 244,
+        "className": "syntax-variable"
       },
       {
-        "start": 242,
-        "end": 249,
-        "className": "syntax-property"
-      },
-      {
-        "start": 250,
-        "end": 259,
-        "className": "syntax-property"
-      },
-      {
-        "start": 282,
-        "end": 289,
+        "start": 256,
+        "end": 277,
         "className": "syntax-function"
       },
       {
-        "start": 290,
-        "end": 294,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 294,
-        "end": 296,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 296,
-        "end": 303,
-        "className": "syntax-property"
-      },
-      {
-        "start": 305,
-        "end": 309,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 309,
-        "end": 311,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 311,
-        "end": 318,
-        "className": "syntax-property"
-      },
-      {
-        "start": 319,
-        "end": 328,
-        "className": "syntax-property"
-      },
-      {
-        "start": 337,
-        "end": 366,
-        "className": "syntax-function"
-      },
-      {
-        "start": 367,
-        "end": 368,
-        "className": "syntax-number"
-      },
-      {
-        "start": 377,
-        "end": 383,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 384,
-        "end": 394,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 405,
-        "end": 413,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 413,
-        "end": 414,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 414,
-        "end": 422,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 423,
-        "end": 426,
+        "start": 289,
+        "end": 295,
         "className": "syntax-type"
       },
       {
-        "start": 428,
-        "end": 436,
+        "start": 296,
+        "end": 301,
+        "className": "syntax-function"
+      },
+      {
+        "start": 302,
+        "end": 305,
+        "className": "syntax-type"
+      },
+      {
+        "start": 307,
+        "end": 312,
+        "className": "syntax-type"
+      },
+      {
+        "start": 314,
+        "end": 333,
+        "className": "syntax-type"
+      },
+      {
+        "start": 346,
+        "end": 351,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 352,
+        "end": 359,
+        "className": "syntax-property"
+      },
+      {
+        "start": 360,
+        "end": 372,
+        "className": "syntax-function"
+      },
+      {
+        "start": 373,
+        "end": 377,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 377,
+        "end": 379,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 379,
+        "end": 386,
+        "className": "syntax-property"
+      },
+      {
+        "start": 401,
+        "end": 405,
         "className": "syntax-keyword"
+      },
+      {
+        "start": 406,
+        "end": 408,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 410,
+        "end": 413,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 414,
+        "end": 415,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 416,
+        "end": 420,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 443,
+        "end": 447,
+        "className": "syntax-function"
+      },
+      {
+        "start": 448,
+        "end": 453,
+        "className": "syntax-function"
+      },
+      {
+        "start": 457,
+        "end": 460,
+        "className": "syntax-function"
+      },
+      {
+        "start": 464,
+        "end": 469,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 480,
+        "end": 485,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 486,
+        "end": 495,
+        "className": "syntax-type"
+      },
+      {
+        "start": 496,
+        "end": 501,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 502,
+        "end": 503,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 504,
+        "end": 507,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 508,
+        "end": 509,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 510,
+        "end": 514,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 524,
+        "end": 551,
+        "className": "syntax-function"
+      },
+      {
+        "start": 552,
+        "end": 557,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 568,
+        "end": 572,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 572,
+        "end": 574,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 574,
+        "end": 581,
+        "className": "syntax-property"
+      },
+      {
+        "start": 582,
+        "end": 591,
+        "className": "syntax-property"
+      },
+      {
+        "start": 592,
+        "end": 593,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 609,
+        "end": 633,
+        "className": "syntax-function"
+      },
+      {
+        "start": 634,
+        "end": 638,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 638,
+        "end": 640,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 640,
+        "end": 647,
+        "className": "syntax-property"
+      },
+      {
+        "start": 648,
+        "end": 657,
+        "className": "syntax-property"
+      },
+      {
+        "start": 699,
+        "end": 704,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 706,
+        "end": 711,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 713,
+        "end": 732,
+        "className": "syntax-function"
+      },
+      {
+        "start": 745,
+        "end": 772,
+        "className": "syntax-function"
+      },
+      {
+        "start": 773,
+        "end": 778,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 793,
+        "end": 797,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 804,
+        "end": 819,
+        "className": "syntax-function"
+      },
+      {
+        "start": 825,
+        "end": 831,
+        "className": "syntax-function"
+      },
+      {
+        "start": 832,
+        "end": 836,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 836,
+        "end": 838,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 838,
+        "end": 845,
+        "className": "syntax-property"
+      },
+      {
+        "start": 846,
+        "end": 854,
+        "className": "syntax-property"
+      },
+      {
+        "start": 856,
+        "end": 859,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 861,
+        "end": 866,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 875,
+        "end": 883,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 883,
+        "end": 884,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 884,
+        "end": 892,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 893,
+        "end": 896,
+        "className": "syntax-type"
+      },
+      {
+        "start": 898,
+        "end": 906,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 907,
+        "end": 913,
+        "className": "syntax-type"
+      },
+      {
+        "start": 913,
+        "end": 914,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 917,
+        "end": 925,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 925,
+        "end": 926,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 926,
+        "end": 934,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 935,
+        "end": 949,
+        "className": "syntax-type"
+      },
+      {
+        "start": 949,
+        "end": 950,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 955,
+        "end": 975,
+        "className": "syntax-type"
+      },
+      {
+        "start": 980,
+        "end": 984,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 989,
+        "end": 995,
+        "className": "syntax-type"
+      },
+      {
+        "start": 995,
+        "end": 996,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 996,
+        "end": 999,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1001,
+        "end": 1007,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1007,
+        "end": 1008,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1015,
+        "end": 1028,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1029,
+        "end": 1043,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1044,
+        "end": 1051,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1053,
+        "end": 1067,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1068,
+        "end": 1074,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1099,
+        "end": 1117,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1131,
+        "end": 1138,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1139,
+        "end": 1144,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1145,
+        "end": 1149,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1149,
+        "end": 1151,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1151,
+        "end": 1158,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1159,
+        "end": 1167,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1176,
+        "end": 1179,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1183,
+        "end": 1190,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1191,
+        "end": 1193,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1194,
+        "end": 1200,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1201,
+        "end": 1203,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1204,
+        "end": 1209,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1210,
+        "end": 1212,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1213,
+        "end": 1217,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1217,
+        "end": 1219,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1219,
+        "end": 1226,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1227,
+        "end": 1236,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1249,
+        "end": 1251,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1251,
+        "end": 1256,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1259,
+        "end": 1263,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1264,
+        "end": 1266,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1266,
+        "end": 1273,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1283,
+        "end": 1284,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1284,
+        "end": 1289,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1290,
+        "end": 1291,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1292,
+        "end": 1293,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1293,
+        "end": 1300,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1308,
+        "end": 1310,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1312,
+        "end": 1319,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1320,
+        "end": 1322,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1323,
+        "end": 1329,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1339,
+        "end": 1354,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1355,
+        "end": 1360,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1369,
+        "end": 1373,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1382,
+        "end": 1397,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1398,
+        "end": 1401,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1405,
+        "end": 1412,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1414,
+        "end": 1420,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1451,
+        "end": 1470,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1471,
+        "end": 1478,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1489,
+        "end": 1497,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1497,
+        "end": 1498,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1498,
+        "end": 1506,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1507,
+        "end": 1510,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1512,
+        "end": 1520,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1521,
+        "end": 1527,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1527,
+        "end": 1528,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1531,
+        "end": 1539,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1539,
+        "end": 1540,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1540,
+        "end": 1548,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1549,
+        "end": 1565,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1565,
+        "end": 1566,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1571,
+        "end": 1591,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1596,
+        "end": 1600,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1605,
+        "end": 1611,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1611,
+        "end": 1612,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1612,
+        "end": 1615,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1617,
+        "end": 1623,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1623,
+        "end": 1624,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1631,
+        "end": 1644,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1645,
+        "end": 1661,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1662,
+        "end": 1669,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1671,
+        "end": 1687,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1688,
+        "end": 1694,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1719,
+        "end": 1739,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1753,
+        "end": 1758,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1759,
+        "end": 1768,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1769,
+        "end": 1773,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1774,
+        "end": 1775,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1776,
+        "end": 1780,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1790,
+        "end": 1795,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1796,
+        "end": 1805,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1806,
+        "end": 1811,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1812,
+        "end": 1813,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1819,
+        "end": 1827,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1828,
+        "end": 1835,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1837,
+        "end": 1843,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1853,
+        "end": 1855,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1857,
+        "end": 1862,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1863,
+        "end": 1864,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1865,
+        "end": 1873,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1897,
+        "end": 1899,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1901,
+        "end": 1906,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1910,
+        "end": 1914,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1928,
+        "end": 1949,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1964,
+        "end": 1981,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1982,
+        "end": 1987,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1989,
+        "end": 2008,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2023,
+        "end": 2030,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2031,
+        "end": 2036,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2037,
+        "end": 2057,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2058,
+        "end": 2063,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2065,
+        "end": 2072,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2074,
+        "end": 2080,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2099,
+        "end": 2107,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2108,
+        "end": 2112,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2112,
+        "end": 2114,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2114,
+        "end": 2121,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2122,
+        "end": 2130,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2132,
+        "end": 2136,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2136,
+        "end": 2138,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2138,
+        "end": 2145,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2146,
+        "end": 2155,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2181,
+        "end": 2200,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2215,
+        "end": 2244,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2256,
+        "end": 2269,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2270,
+        "end": 2274,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2274,
+        "end": 2276,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2276,
+        "end": 2283,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2284,
+        "end": 2292,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2318,
+        "end": 2322,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2322,
+        "end": 2324,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2324,
+        "end": 2331,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2332,
+        "end": 2349,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2374,
+        "end": 2375,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2376,
+        "end": 2380,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2380,
+        "end": 2382,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2382,
+        "end": 2389,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2390,
+        "end": 2398,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2411,
+        "end": 2415,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2415,
+        "end": 2417,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2417,
+        "end": 2424,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2425,
+        "end": 2433,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2434,
+        "end": 2435,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2436,
+        "end": 2441,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2453,
+        "end": 2457,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2457,
+        "end": 2459,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2459,
+        "end": 2466,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2467,
+        "end": 2476,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2477,
+        "end": 2478,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2479,
+        "end": 2483,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2483,
+        "end": 2485,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2485,
+        "end": 2492,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2493,
+        "end": 2501,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2502,
+        "end": 2503,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2504,
+        "end": 2509,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2521,
+        "end": 2525,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2525,
+        "end": 2527,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2527,
+        "end": 2534,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2535,
+        "end": 2552,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2553,
+        "end": 2554,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2555,
+        "end": 2559,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2559,
+        "end": 2561,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2561,
+        "end": 2568,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2569,
+        "end": 2578,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2596,
+        "end": 2600,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2601,
+        "end": 2603,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2605,
+        "end": 2609,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2613,
+        "end": 2618,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2628,
+        "end": 2643,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2649,
+        "end": 2653,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2654,
+        "end": 2661,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2663,
+        "end": 2669,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2671,
+        "end": 2675,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2675,
+        "end": 2677,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2677,
+        "end": 2684,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2685,
+        "end": 2693,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2703,
+        "end": 2707,
+        "className": "syntax-keyword"
+      }
+    ]
+  },
+  {
+    "language": "cpp",
+    "name": "cpp/libstdcxx_vector_erase_assign.cpp",
+    "code": "_GLIBCXX20_CONSTEXPR\ntypename vector<_Tp, _Alloc>::iterator\nvector<_Tp, _Alloc>::\n_M_erase(iterator __position)\n{\n  if (__position + 1 != end())\n    _GLIBCXX_MOVE3(__position + 1, end(), __position);\n  --this->_M_impl._M_finish;\n  _Alloc_traits::destroy(this->_M_impl, this->_M_impl._M_finish);\n  _GLIBCXX_ASAN_ANNOTATE_SHRINK(1);\n  return __position;\n}\n\ntemplate<typename _Tp, typename _Alloc>\n_GLIBCXX20_CONSTEXPR\ntypename vector<_Tp, _Alloc>::iterator\nvector<_Tp, _Alloc>::\n_M_erase(iterator __first, iterator __last)\n{\n  if (__first != __last)\n    {\n      if (__last != end())\n        _GLIBCXX_MOVE3(__last, end(), __first);\n      _M_erase_at_end(__first.base() + (end() - __last));\n    }\n  return __first;\n}\n\ntemplate<typename _Tp, typename _Alloc>\n_GLIBCXX20_CONSTEXPR\nvector<_Tp, _Alloc>&\nvector<_Tp, _Alloc>::\noperator=(const vector<_Tp, _Alloc>& __x)\n{\n  if (std::__addressof(__x) != this)\n    {\n      _GLIBCXX_ASAN_ANNOTATE_REINIT;\n#if __cplusplus >= 201103L\n      if (_Alloc_traits::_S_propagate_on_copy_assign())\n        {\n          if (!_Alloc_traits::_S_always_equal()\n              && _M_get_Tp_allocator() != __x._M_get_Tp_allocator())\n            {\n              // replacement allocator cannot free existing storage\n              this->clear();\n              _M_deallocate(this->_M_impl._M_start,\n                            this->_M_impl._M_end_of_storage\n                            - this->_M_impl._M_start);\n              this->_M_impl._M_start = nullptr;\n              this->_M_impl._M_finish = nullptr;\n              this->_M_impl._M_end_of_storage = nullptr;\n            }\n          std::__alloc_on_copy(_M_get_Tp_allocator(),\n                               __x._M_get_Tp_allocator());\n        }\n#endif\n      const size_type __xlen = __x.size();\n      if (__xlen > capacity())\n        {\n          pointer __tmp = _M_allocate_and_copy(__xlen, __x.begin(),\n                                               __x.end());\n          std::_Destroy(this->_M_impl._M_start, this->_M_impl._M_finish,\n                        _M_get_Tp_allocator());\n          _M_deallocate(this->_M_impl._M_start,\n                        this->_M_impl._M_end_of_storage\n                        - this->_M_impl._M_start);\n          this->_M_impl._M_start = __tmp;\n          this->_M_impl._M_end_of_storage = this->_M_impl._M_start + __xlen;\n        }\n      else if (size() >= __xlen)\n        {\n          std::_Destroy(std::copy(__x.begin(), __x.end(), begin()),\n                        end(), _M_get_Tp_allocator());\n        }\n      else\n        {\n          std::copy(__x._M_impl._M_start, __x._M_impl._M_start + size(),\n                    this->_M_impl._M_start);\n          std::__uninitialized_copy_a(__x._M_impl._M_start + size(),\n                                      __x._M_impl._M_finish,\n                                      this->_M_impl._M_finish,\n                                      _M_get_Tp_allocator());\n        }\n      this->_M_impl._M_finish = this->_M_impl._M_start + __xlen;\n    }\n  return *this;\n}",
+    "spans": [
+      {
+        "start": 0,
+        "end": 20,
+        "className": "syntax-type"
+      },
+      {
+        "start": 21,
+        "end": 29,
+        "className": "syntax-type"
+      },
+      {
+        "start": 30,
+        "end": 36,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 36,
+        "end": 37,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 37,
+        "end": 40,
+        "className": "syntax-type"
+      },
+      {
+        "start": 42,
+        "end": 48,
+        "className": "syntax-type"
+      },
+      {
+        "start": 48,
+        "end": 49,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 51,
+        "end": 59,
+        "className": "syntax-type"
+      },
+      {
+        "start": 60,
+        "end": 66,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 66,
+        "end": 67,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 67,
+        "end": 70,
+        "className": "syntax-type"
+      },
+      {
+        "start": 72,
+        "end": 78,
+        "className": "syntax-type"
+      },
+      {
+        "start": 78,
+        "end": 79,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 82,
+        "end": 90,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 91,
+        "end": 99,
+        "className": "syntax-type"
+      },
+      {
+        "start": 100,
+        "end": 110,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 116,
+        "end": 118,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 120,
+        "end": 130,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 131,
+        "end": 132,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 133,
+        "end": 134,
+        "className": "syntax-number"
+      },
+      {
+        "start": 135,
+        "end": 137,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 138,
+        "end": 141,
+        "className": "syntax-function"
+      },
+      {
+        "start": 149,
+        "end": 163,
+        "className": "syntax-function"
+      },
+      {
+        "start": 164,
+        "end": 174,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 175,
+        "end": 176,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 177,
+        "end": 178,
+        "className": "syntax-number"
+      },
+      {
+        "start": 180,
+        "end": 183,
+        "className": "syntax-function"
+      },
+      {
+        "start": 187,
+        "end": 197,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 202,
+        "end": 204,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 204,
+        "end": 208,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 208,
+        "end": 210,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 210,
+        "end": 217,
+        "className": "syntax-property"
+      },
+      {
+        "start": 218,
+        "end": 227,
+        "className": "syntax-property"
+      },
+      {
+        "start": 246,
+        "end": 253,
+        "className": "syntax-function"
+      },
+      {
+        "start": 254,
+        "end": 258,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 258,
+        "end": 260,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 260,
+        "end": 267,
+        "className": "syntax-property"
+      },
+      {
+        "start": 269,
+        "end": 273,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 273,
+        "end": 275,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 275,
+        "end": 282,
+        "className": "syntax-property"
+      },
+      {
+        "start": 283,
+        "end": 292,
+        "className": "syntax-property"
+      },
+      {
+        "start": 297,
+        "end": 326,
+        "className": "syntax-function"
+      },
+      {
+        "start": 327,
+        "end": 328,
+        "className": "syntax-number"
+      },
+      {
+        "start": 333,
+        "end": 339,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 340,
+        "end": 350,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 355,
+        "end": 363,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 363,
+        "end": 364,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 364,
+        "end": 372,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 373,
+        "end": 376,
+        "className": "syntax-type"
+      },
+      {
+        "start": 378,
+        "end": 386,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 387,
+        "end": 393,
+        "className": "syntax-type"
+      },
+      {
+        "start": 393,
+        "end": 394,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 395,
+        "end": 415,
+        "className": "syntax-type"
+      },
+      {
+        "start": 416,
+        "end": 424,
+        "className": "syntax-type"
+      },
+      {
+        "start": 425,
+        "end": 431,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 431,
+        "end": 432,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 432,
+        "end": 435,
+        "className": "syntax-type"
       },
       {
         "start": 437,
@@ -16018,39 +16053,49 @@ export const codeSnippets = [
         "className": "syntax-operator"
       },
       {
-        "start": 449,
-        "end": 469,
+        "start": 446,
+        "end": 454,
         "className": "syntax-type"
       },
       {
-        "start": 474,
-        "end": 482,
-        "className": "syntax-type"
-      },
-      {
-        "start": 483,
-        "end": 489,
+        "start": 455,
+        "end": 461,
         "className": "syntax-variable"
       },
       {
-        "start": 489,
-        "end": 490,
+        "start": 461,
+        "end": 462,
         "className": "syntax-operator"
       },
       {
-        "start": 490,
-        "end": 493,
+        "start": 462,
+        "end": 465,
+        "className": "syntax-type"
+      },
+      {
+        "start": 467,
+        "end": 473,
+        "className": "syntax-type"
+      },
+      {
+        "start": 473,
+        "end": 474,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 477,
+        "end": 485,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 486,
+        "end": 494,
         "className": "syntax-type"
       },
       {
         "start": 495,
-        "end": 501,
-        "className": "syntax-type"
-      },
-      {
-        "start": 501,
         "end": 502,
-        "className": "syntax-operator"
+        "className": "syntax-variable"
       },
       {
         "start": 504,
@@ -16058,164 +16103,204 @@ export const codeSnippets = [
         "className": "syntax-type"
       },
       {
-        "start": 517,
-        "end": 523,
+        "start": 513,
+        "end": 519,
         "className": "syntax-variable"
       },
       {
-        "start": 523,
-        "end": 524,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 524,
+        "start": 525,
         "end": 527,
-        "className": "syntax-type"
-      },
-      {
-        "start": 529,
-        "end": 535,
-        "className": "syntax-type"
-      },
-      {
-        "start": 535,
-        "end": 536,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 543,
-        "end": 551,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 552,
-        "end": 560,
-        "className": "syntax-type"
-      },
-      {
-        "start": 561,
-        "end": 568,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 570,
-        "end": 578,
-        "className": "syntax-type"
-      },
-      {
-        "start": 579,
-        "end": 585,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 599,
-        "end": 601,
         "className": "syntax-keyword"
       },
       {
-        "start": 603,
+        "start": 529,
+        "end": 536,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 537,
+        "end": 539,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 540,
+        "end": 546,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 560,
+        "end": 562,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 564,
+        "end": 570,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 571,
+        "end": 573,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 574,
+        "end": 577,
+        "className": "syntax-function"
+      },
+      {
+        "start": 589,
+        "end": 603,
+        "className": "syntax-function"
+      },
+      {
+        "start": 604,
         "end": 610,
         "className": "syntax-variable"
       },
       {
-        "start": 611,
-        "end": 613,
-        "className": "syntax-operator"
+        "start": 612,
+        "end": 615,
+        "className": "syntax-function"
       },
       {
-        "start": 614,
-        "end": 620,
+        "start": 619,
+        "end": 626,
         "className": "syntax-variable"
       },
       {
-        "start": 642,
-        "end": 644,
-        "className": "syntax-keyword"
+        "start": 635,
+        "end": 650,
+        "className": "syntax-function"
       },
       {
-        "start": 646,
-        "end": 652,
+        "start": 651,
+        "end": 658,
         "className": "syntax-variable"
       },
       {
-        "start": 653,
-        "end": 655,
+        "start": 659,
+        "end": 663,
+        "className": "syntax-function"
+      },
+      {
+        "start": 666,
+        "end": 667,
         "className": "syntax-operator"
       },
       {
-        "start": 656,
-        "end": 659,
+        "start": 669,
+        "end": 672,
         "className": "syntax-function"
       },
       {
         "start": 675,
-        "end": 689,
-        "className": "syntax-function"
+        "end": 676,
+        "className": "syntax-operator"
       },
       {
-        "start": 690,
-        "end": 696,
+        "start": 677,
+        "end": 683,
         "className": "syntax-variable"
       },
       {
-        "start": 698,
+        "start": 695,
         "end": 701,
-        "className": "syntax-function"
+        "className": "syntax-keyword"
       },
       {
-        "start": 705,
-        "end": 712,
+        "start": 702,
+        "end": 709,
         "className": "syntax-variable"
       },
       {
-        "start": 725,
-        "end": 740,
-        "className": "syntax-function"
+        "start": 714,
+        "end": 722,
+        "className": "syntax-keyword"
       },
       {
-        "start": 741,
-        "end": 748,
-        "className": "syntax-variable"
+        "start": 722,
+        "end": 723,
+        "className": "syntax-operator"
       },
       {
-        "start": 749,
+        "start": 723,
+        "end": 731,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 732,
+        "end": 735,
+        "className": "syntax-type"
+      },
+      {
+        "start": 737,
+        "end": 745,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 746,
+        "end": 752,
+        "className": "syntax-type"
+      },
+      {
+        "start": 752,
         "end": 753,
-        "className": "syntax-function"
-      },
-      {
-        "start": 756,
-        "end": 757,
         "className": "syntax-operator"
       },
       {
-        "start": 759,
-        "end": 762,
-        "className": "syntax-function"
+        "start": 754,
+        "end": 774,
+        "className": "syntax-type"
       },
       {
-        "start": 765,
-        "end": 766,
+        "start": 775,
+        "end": 781,
+        "className": "syntax-type"
+      },
+      {
+        "start": 781,
+        "end": 782,
         "className": "syntax-operator"
       },
       {
-        "start": 767,
-        "end": 773,
-        "className": "syntax-variable"
+        "start": 782,
+        "end": 785,
+        "className": "syntax-type"
+      },
+      {
+        "start": 787,
+        "end": 793,
+        "className": "syntax-type"
       },
       {
         "start": 793,
-        "end": 799,
-        "className": "syntax-keyword"
+        "end": 795,
+        "className": "syntax-operator"
       },
       {
-        "start": 800,
-        "end": 807,
-        "className": "syntax-variable"
+        "start": 796,
+        "end": 802,
+        "className": "syntax-type"
       },
       {
-        "start": 818,
-        "end": 826,
-        "className": "syntax-keyword"
+        "start": 802,
+        "end": 803,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 803,
+        "end": 806,
+        "className": "syntax-type"
+      },
+      {
+        "start": 808,
+        "end": 814,
+        "className": "syntax-type"
+      },
+      {
+        "start": 814,
+        "end": 815,
+        "className": "syntax-operator"
       },
       {
         "start": 826,
@@ -16223,689 +16308,1786 @@ export const codeSnippets = [
         "className": "syntax-operator"
       },
       {
-        "start": 827,
-        "end": 835,
+        "start": 828,
+        "end": 833,
         "className": "syntax-keyword"
       },
       {
-        "start": 836,
-        "end": 839,
+        "start": 834,
+        "end": 840,
         "className": "syntax-type"
+      },
+      {
+        "start": 840,
+        "end": 841,
+        "className": "syntax-operator"
       },
       {
         "start": 841,
-        "end": 849,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 850,
-        "end": 856,
+        "end": 844,
         "className": "syntax-type"
       },
       {
-        "start": 856,
-        "end": 857,
+        "start": 846,
+        "end": 852,
+        "className": "syntax-type"
+      },
+      {
+        "start": 852,
+        "end": 854,
         "className": "syntax-operator"
       },
       {
-        "start": 862,
-        "end": 882,
-        "className": "syntax-type"
+        "start": 855,
+        "end": 858,
+        "className": "syntax-variable"
       },
       {
-        "start": 887,
-        "end": 893,
-        "className": "syntax-type"
+        "start": 864,
+        "end": 866,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 873,
+        "end": 884,
+        "className": "syntax-function"
+      },
+      {
+        "start": 885,
+        "end": 888,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 890,
+        "end": 892,
+        "className": "syntax-operator"
       },
       {
         "start": 893,
-        "end": 894,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 894,
         "end": 897,
-        "className": "syntax-type"
+        "className": "syntax-variable"
       },
       {
-        "start": 899,
-        "end": 905,
-        "className": "syntax-type"
+        "start": 911,
+        "end": 940,
+        "className": "syntax-variable"
       },
       {
-        "start": 905,
-        "end": 907,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 912,
-        "end": 918,
-        "className": "syntax-type"
-      },
-      {
-        "start": 918,
-        "end": 919,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 919,
-        "end": 922,
-        "className": "syntax-type"
-      },
-      {
-        "start": 924,
-        "end": 930,
-        "className": "syntax-type"
-      },
-      {
-        "start": 930,
-        "end": 931,
-        "className": "syntax-operator"
+        "start": 942,
+        "end": 945,
+        "className": "syntax-keyword"
       },
       {
         "start": 946,
-        "end": 947,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 948,
-        "end": 953,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 954,
-        "end": 960,
-        "className": "syntax-type"
-      },
-      {
-        "start": 960,
-        "end": 961,
-        "className": "syntax-operator"
+        "end": 957,
+        "className": "syntax-variable"
       },
       {
         "start": 961,
-        "end": 964,
-        "className": "syntax-type"
-      },
-      {
-        "start": 966,
-        "end": 972,
-        "className": "syntax-type"
-      },
-      {
-        "start": 972,
-        "end": 974,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 975,
-        "end": 978,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 992,
-        "end": 994,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1001,
-        "end": 1012,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1013,
-        "end": 1016,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1018,
-        "end": 1020,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1021,
-        "end": 1025,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1047,
-        "end": 1076,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1078,
-        "end": 1081,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1082,
-        "end": 1093,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1097,
-        "end": 1104,
+        "end": 968,
         "className": "syntax-number"
       },
       {
-        "start": 1115,
-        "end": 1117,
+        "start": 975,
+        "end": 977,
         "className": "syntax-keyword"
       },
       {
-        "start": 1134,
-        "end": 1161,
+        "start": 994,
+        "end": 1021,
         "className": "syntax-function"
       },
       {
-        "start": 1193,
-        "end": 1195,
+        "start": 1045,
+        "end": 1047,
         "className": "syntax-keyword"
       },
       {
-        "start": 1213,
-        "end": 1228,
+        "start": 1065,
+        "end": 1080,
         "className": "syntax-function"
       },
       {
-        "start": 1249,
-        "end": 1251,
+        "start": 1097,
+        "end": 1099,
         "className": "syntax-operator"
       },
       {
-        "start": 1252,
-        "end": 1271,
+        "start": 1100,
+        "end": 1119,
         "className": "syntax-function"
       },
       {
-        "start": 1274,
-        "end": 1276,
+        "start": 1122,
+        "end": 1124,
         "className": "syntax-operator"
       },
       {
-        "start": 1277,
-        "end": 1280,
+        "start": 1125,
+        "end": 1128,
         "className": "syntax-variable"
       },
       {
-        "start": 1281,
-        "end": 1300,
+        "start": 1129,
+        "end": 1148,
         "className": "syntax-function"
       },
       {
-        "start": 1340,
-        "end": 1393,
+        "start": 1180,
+        "end": 1233,
         "className": "syntax-comment"
       },
       {
-        "start": 1412,
-        "end": 1416,
+        "start": 1248,
+        "end": 1252,
         "className": "syntax-variable"
       },
       {
-        "start": 1416,
+        "start": 1252,
+        "end": 1254,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1254,
+        "end": 1259,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1277,
+        "end": 1290,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1291,
+        "end": 1295,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1295,
+        "end": 1297,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1297,
+        "end": 1304,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1305,
+        "end": 1313,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1343,
+        "end": 1347,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1347,
+        "end": 1349,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1349,
+        "end": 1356,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1357,
+        "end": 1374,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1403,
+        "end": 1404,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1405,
+        "end": 1409,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1409,
+        "end": 1411,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1411,
         "end": 1418,
-        "className": "syntax-operator"
+        "className": "syntax-property"
       },
       {
-        "start": 1418,
-        "end": 1423,
-        "className": "syntax-function"
+        "start": 1419,
+        "end": 1427,
+        "className": "syntax-property"
       },
       {
-        "start": 1445,
-        "end": 1458,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1459,
-        "end": 1463,
+        "start": 1444,
+        "end": 1448,
         "className": "syntax-variable"
       },
       {
-        "start": 1463,
-        "end": 1465,
+        "start": 1448,
+        "end": 1450,
         "className": "syntax-operator"
       },
       {
-        "start": 1465,
-        "end": 1472,
+        "start": 1450,
+        "end": 1457,
         "className": "syntax-property"
       },
       {
-        "start": 1473,
-        "end": 1481,
+        "start": 1458,
+        "end": 1466,
         "className": "syntax-property"
       },
       {
-        "start": 1515,
-        "end": 1519,
+        "start": 1467,
+        "end": 1468,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1469,
+        "end": 1476,
+        "className": "syntax-constant"
+      },
+      {
+        "start": 1492,
+        "end": 1496,
         "className": "syntax-variable"
       },
       {
-        "start": 1519,
-        "end": 1521,
+        "start": 1496,
+        "end": 1498,
         "className": "syntax-operator"
       },
       {
-        "start": 1521,
-        "end": 1528,
+        "start": 1498,
+        "end": 1505,
         "className": "syntax-property"
       },
       {
-        "start": 1529,
-        "end": 1546,
+        "start": 1506,
+        "end": 1515,
         "className": "syntax-property"
       },
       {
-        "start": 1579,
-        "end": 1580,
+        "start": 1516,
+        "end": 1517,
         "className": "syntax-operator"
       },
       {
-        "start": 1581,
-        "end": 1585,
+        "start": 1518,
+        "end": 1525,
+        "className": "syntax-constant"
+      },
+      {
+        "start": 1541,
+        "end": 1545,
         "className": "syntax-variable"
       },
       {
-        "start": 1585,
-        "end": 1587,
+        "start": 1545,
+        "end": 1547,
         "className": "syntax-operator"
       },
       {
-        "start": 1587,
-        "end": 1594,
+        "start": 1547,
+        "end": 1554,
         "className": "syntax-property"
       },
       {
-        "start": 1595,
-        "end": 1603,
+        "start": 1555,
+        "end": 1572,
         "className": "syntax-property"
       },
       {
-        "start": 1624,
+        "start": 1573,
+        "end": 1574,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1575,
+        "end": 1582,
+        "className": "syntax-constant"
+      },
+      {
+        "start": 1613,
         "end": 1628,
-        "className": "syntax-variable"
+        "className": "syntax-function"
       },
       {
-        "start": 1628,
-        "end": 1630,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1630,
-        "end": 1637,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1638,
-        "end": 1646,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1647,
+        "start": 1629,
         "end": 1648,
-        "className": "syntax-operator"
+        "className": "syntax-function"
       },
       {
-        "start": 1649,
-        "end": 1656,
-        "className": "syntax-constant"
-      },
-      {
-        "start": 1676,
-        "end": 1680,
+        "start": 1683,
+        "end": 1686,
         "className": "syntax-variable"
       },
       {
-        "start": 1680,
-        "end": 1682,
-        "className": "syntax-operator"
+        "start": 1687,
+        "end": 1706,
+        "className": "syntax-function"
       },
       {
-        "start": 1682,
-        "end": 1689,
-        "className": "syntax-property"
+        "start": 1721,
+        "end": 1727,
+        "className": "syntax-keyword"
       },
       {
-        "start": 1690,
-        "end": 1699,
-        "className": "syntax-property"
+        "start": 1734,
+        "end": 1739,
+        "className": "syntax-keyword"
       },
       {
-        "start": 1700,
-        "end": 1701,
-        "className": "syntax-operator"
+        "start": 1740,
+        "end": 1749,
+        "className": "syntax-type"
       },
       {
-        "start": 1702,
-        "end": 1709,
-        "className": "syntax-constant"
-      },
-      {
-        "start": 1729,
-        "end": 1733,
+        "start": 1750,
+        "end": 1756,
         "className": "syntax-variable"
       },
       {
-        "start": 1733,
-        "end": 1735,
+        "start": 1757,
+        "end": 1758,
         "className": "syntax-operator"
       },
       {
-        "start": 1735,
-        "end": 1742,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1743,
-        "end": 1760,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1761,
+        "start": 1759,
         "end": 1762,
-        "className": "syntax-operator"
+        "className": "syntax-variable"
       },
       {
         "start": 1763,
-        "end": 1770,
-        "className": "syntax-constant"
-      },
-      {
-        "start": 1809,
-        "end": 1824,
+        "end": 1767,
         "className": "syntax-function"
       },
       {
-        "start": 1825,
-        "end": 1844,
-        "className": "syntax-function"
+        "start": 1777,
+        "end": 1779,
+        "className": "syntax-keyword"
       },
       {
-        "start": 1883,
-        "end": 1886,
+        "start": 1781,
+        "end": 1787,
         "className": "syntax-variable"
       },
       {
-        "start": 1887,
-        "end": 1906,
+        "start": 1788,
+        "end": 1789,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1790,
+        "end": 1798,
         "className": "syntax-function"
       },
       {
-        "start": 1925,
-        "end": 1931,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1942,
-        "end": 1947,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1948,
-        "end": 1957,
+        "start": 1822,
+        "end": 1829,
         "className": "syntax-type"
       },
       {
-        "start": 1958,
-        "end": 1964,
+        "start": 1830,
+        "end": 1835,
         "className": "syntax-variable"
       },
       {
-        "start": 1965,
-        "end": 1966,
+        "start": 1836,
+        "end": 1837,
         "className": "syntax-operator"
+      },
+      {
+        "start": 1838,
+        "end": 1858,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1859,
+        "end": 1865,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1867,
+        "end": 1870,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1871,
+        "end": 1876,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1927,
+        "end": 1930,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1931,
+        "end": 1934,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1954,
+        "end": 1962,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1963,
+        "end": 1967,
+        "className": "syntax-variable"
       },
       {
         "start": 1967,
-        "end": 1970,
+        "end": 1969,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1969,
+        "end": 1976,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1977,
+        "end": 1985,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1987,
+        "end": 1991,
         "className": "syntax-variable"
       },
       {
-        "start": 1971,
-        "end": 1975,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1989,
-        "end": 1991,
-        "className": "syntax-keyword"
+        "start": 1991,
+        "end": 1993,
+        "className": "syntax-operator"
       },
       {
         "start": 1993,
-        "end": 1999,
-        "className": "syntax-variable"
+        "end": 2000,
+        "className": "syntax-property"
       },
       {
-        "start": 2000,
-        "end": 2001,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2002,
+        "start": 2001,
         "end": 2010,
-        "className": "syntax-function"
+        "className": "syntax-property"
       },
       {
-        "start": 2042,
-        "end": 2049,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2050,
+        "start": 2036,
         "end": 2055,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2056,
-        "end": 2057,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2058,
-        "end": 2078,
         "className": "syntax-function"
       },
       {
-        "start": 2079,
-        "end": 2085,
+        "start": 2070,
+        "end": 2083,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2084,
+        "end": 2088,
         "className": "syntax-variable"
       },
       {
-        "start": 2087,
+        "start": 2088,
         "end": 2090,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2091,
-        "end": 2096,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2151,
-        "end": 2154,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2155,
-        "end": 2158,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2182,
-        "end": 2190,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2191,
-        "end": 2195,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2195,
-        "end": 2197,
         "className": "syntax-operator"
       },
       {
-        "start": 2197,
-        "end": 2204,
+        "start": 2090,
+        "end": 2097,
         "className": "syntax-property"
       },
       {
-        "start": 2205,
-        "end": 2213,
+        "start": 2098,
+        "end": 2106,
         "className": "syntax-property"
       },
       {
-        "start": 2215,
-        "end": 2219,
+        "start": 2132,
+        "end": 2136,
         "className": "syntax-variable"
       },
       {
-        "start": 2219,
-        "end": 2221,
+        "start": 2136,
+        "end": 2138,
         "className": "syntax-operator"
       },
       {
-        "start": 2221,
-        "end": 2228,
+        "start": 2138,
+        "end": 2145,
         "className": "syntax-property"
+      },
+      {
+        "start": 2146,
+        "end": 2163,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2188,
+        "end": 2189,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2190,
+        "end": 2194,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2194,
+        "end": 2196,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2196,
+        "end": 2203,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2204,
+        "end": 2212,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2225,
+        "end": 2229,
+        "className": "syntax-variable"
       },
       {
         "start": 2229,
+        "end": 2231,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2231,
         "end": 2238,
         "className": "syntax-property"
       },
       {
-        "start": 2268,
-        "end": 2287,
-        "className": "syntax-function"
+        "start": 2239,
+        "end": 2247,
+        "className": "syntax-property"
       },
       {
-        "start": 2306,
-        "end": 2319,
-        "className": "syntax-function"
+        "start": 2248,
+        "end": 2249,
+        "className": "syntax-operator"
       },
       {
-        "start": 2320,
-        "end": 2324,
+        "start": 2250,
+        "end": 2255,
         "className": "syntax-variable"
       },
       {
+        "start": 2267,
+        "end": 2271,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2271,
+        "end": 2273,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2273,
+        "end": 2280,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2281,
+        "end": 2298,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2299,
+        "end": 2300,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2301,
+        "end": 2305,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2305,
+        "end": 2307,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2307,
+        "end": 2314,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2315,
+        "end": 2323,
+        "className": "syntax-property"
+      },
+      {
         "start": 2324,
-        "end": 2326,
+        "end": 2325,
         "className": "syntax-operator"
       },
       {
         "start": 2326,
-        "end": 2333,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2334,
-        "end": 2342,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2372,
-        "end": 2376,
+        "end": 2332,
         "className": "syntax-variable"
       },
       {
-        "start": 2376,
-        "end": 2378,
-        "className": "syntax-operator"
+        "start": 2350,
+        "end": 2354,
+        "className": "syntax-keyword"
       },
       {
-        "start": 2378,
-        "end": 2385,
-        "className": "syntax-property"
+        "start": 2355,
+        "end": 2357,
+        "className": "syntax-keyword"
       },
       {
-        "start": 2386,
-        "end": 2403,
-        "className": "syntax-property"
+        "start": 2359,
+        "end": 2363,
+        "className": "syntax-function"
       },
       {
-        "start": 2432,
-        "end": 2433,
-        "className": "syntax-operator"
+        "start": 2369,
+        "end": 2375,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2402,
+        "end": 2410,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2416,
+        "end": 2420,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2421,
+        "end": 2424,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2425,
+        "end": 2430,
+        "className": "syntax-function"
       },
       {
         "start": 2434,
-        "end": 2438,
+        "end": 2437,
         "className": "syntax-variable"
       },
       {
         "start": 2438,
-        "end": 2440,
-        "className": "syntax-operator"
+        "end": 2441,
+        "className": "syntax-function"
       },
       {
-        "start": 2440,
-        "end": 2447,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2448,
-        "end": 2456,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2473,
-        "end": 2477,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2477,
-        "end": 2479,
-        "className": "syntax-operator"
+        "start": 2445,
+        "end": 2450,
+        "className": "syntax-function"
       },
       {
         "start": 2479,
-        "end": 2486,
-        "className": "syntax-property"
+        "end": 2482,
+        "className": "syntax-function"
       },
       {
-        "start": 2487,
-        "end": 2495,
-        "className": "syntax-property"
+        "start": 2486,
+        "end": 2505,
+        "className": "syntax-function"
       },
       {
-        "start": 2496,
-        "end": 2497,
-        "className": "syntax-operator"
+        "start": 2526,
+        "end": 2530,
+        "className": "syntax-keyword"
       },
       {
-        "start": 2498,
-        "end": 2503,
+        "start": 2556,
+        "end": 2560,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2561,
+        "end": 2564,
         "className": "syntax-variable"
       },
       {
-        "start": 2519,
-        "end": 2523,
+        "start": 2565,
+        "end": 2572,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2573,
+        "end": 2581,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2583,
+        "end": 2586,
         "className": "syntax-variable"
       },
       {
-        "start": 2523,
-        "end": 2525,
+        "start": 2587,
+        "end": 2594,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2595,
+        "end": 2603,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2604,
+        "end": 2605,
         "className": "syntax-operator"
       },
       {
-        "start": 2525,
-        "end": 2532,
+        "start": 2606,
+        "end": 2610,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2634,
+        "end": 2638,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2638,
+        "end": 2640,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2640,
+        "end": 2647,
         "className": "syntax-property"
+      },
+      {
+        "start": 2648,
+        "end": 2656,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2674,
+        "end": 2696,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2697,
+        "end": 2700,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2701,
+        "end": 2708,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2709,
+        "end": 2717,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2718,
+        "end": 2719,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2720,
+        "end": 2724,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2766,
+        "end": 2769,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2770,
+        "end": 2777,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2778,
+        "end": 2787,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2827,
+        "end": 2831,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2831,
+        "end": 2833,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2833,
+        "end": 2840,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2841,
+        "end": 2850,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2890,
+        "end": 2909,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2930,
+        "end": 2934,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2934,
+        "end": 2936,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2936,
+        "end": 2943,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2944,
+        "end": 2953,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2954,
+        "end": 2955,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2956,
+        "end": 2960,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2960,
+        "end": 2962,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2962,
+        "end": 2969,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2970,
+        "end": 2978,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2979,
+        "end": 2980,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2981,
+        "end": 2987,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2997,
+        "end": 3003,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 3004,
+        "end": 3005,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 3005,
+        "end": 3009,
+        "className": "syntax-variable"
+      }
+    ]
+  },
+  {
+    "language": "cpp",
+    "name": "cpp/libstdcxx_vector_fill_insert.cpp",
+    "code": "_M_fill_insert(iterator __position, size_type __n, const value_type& __x)\n{\n  if (__n != 0)\n    {\n      if (size_type(this->_M_impl._M_end_of_storage\n                    - this->_M_impl._M_finish) >= __n)\n        {\n#if __cplusplus < 201103L\n          value_type __x_copy = __x;\n#else\n          _Temporary_value __tmp(this, __x);\n          value_type& __x_copy = __tmp._M_val();\n#endif\n          const size_type __elems_after = end() - __position;\n          pointer __old_finish(this->_M_impl._M_finish);\n          if (__elems_after > __n)\n            {\n              _GLIBCXX_ASAN_ANNOTATE_GROW(__n);\n              std::__uninitialized_move_a(__old_finish - __n,\n                                          __old_finish,\n                                          __old_finish,\n                                          _M_get_Tp_allocator());\n              this->_M_impl._M_finish += __n;\n              _GLIBCXX_ASAN_ANNOTATE_GREW(__n);\n              _GLIBCXX_MOVE_BACKWARD3(__position.base(),\n                                      __old_finish - __n, __old_finish);\n              std::fill(__position.base(), __position.base() + __n,\n                        __x_copy);\n            }\n          else\n            {\n              _GLIBCXX_ASAN_ANNOTATE_GROW(__n);\n              this->_M_impl._M_finish =\n                std::__uninitialized_fill_n_a(__old_finish,\n                                              __n - __elems_after,\n                                              __x_copy,\n                                              _M_get_Tp_allocator());\n              _GLIBCXX_ASAN_ANNOTATE_GREW(__n - __elems_after);\n              std::__uninitialized_move_a(__position.base(), __old_finish,\n                                          this->_M_impl._M_finish,\n                                          _M_get_Tp_allocator());\n              this->_M_impl._M_finish += __elems_after;\n              _GLIBCXX_ASAN_ANNOTATE_GREW(__elems_after);\n              std::fill(__position.base(), __old_finish, __x_copy);\n            }\n        }\n      else\n        {\n          // Make local copies of these members because the compiler thinks\n          // the allocator can alter them if 'this' is globally reachable.\n          pointer __old_start = this->_M_impl._M_start;\n          pointer __old_finish = this->_M_impl._M_finish;\n          const pointer __pos = __position.base();\n\n          const size_type __len =\n            _M_check_len(__n, \"vector::_M_fill_insert\");\n          const size_type __elems_before = __pos - __old_start;\n          pointer __new_start(this->_M_allocate(__len));\n          pointer __new_finish(__new_start);\n          __try\n            {\n              // See _M_realloc_insert above.\n              std::__uninitialized_fill_n_a(__new_start + __elems_before,\n                                            __n, __x,\n                                            _M_get_Tp_allocator());\n              __new_finish = pointer();\n\n              __new_finish\n                = std::__uninitialized_move_if_noexcept_a\n                (__old_start, __pos, __new_start, _M_get_Tp_allocator());\n\n              __new_finish += __n;\n\n              __new_finish\n                = std::__uninitialized_move_if_noexcept_a\n                (__pos, __old_finish, __new_finish, _M_get_Tp_allocator());\n            }",
+    "spans": [
+      {
+        "start": 0,
+        "end": 14,
+        "className": "syntax-function"
+      },
+      {
+        "start": 15,
+        "end": 23,
+        "className": "syntax-type"
+      },
+      {
+        "start": 24,
+        "end": 34,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 36,
+        "end": 45,
+        "className": "syntax-type"
+      },
+      {
+        "start": 46,
+        "end": 49,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 51,
+        "end": 56,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 57,
+        "end": 67,
+        "className": "syntax-type"
+      },
+      {
+        "start": 67,
+        "end": 68,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 69,
+        "end": 72,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 78,
+        "end": 80,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 82,
+        "end": 85,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 86,
+        "end": 88,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 89,
+        "end": 90,
+        "className": "syntax-number"
+      },
+      {
+        "start": 104,
+        "end": 106,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 108,
+        "end": 117,
+        "className": "syntax-function"
+      },
+      {
+        "start": 118,
+        "end": 122,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 122,
+        "end": 124,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 124,
+        "end": 131,
+        "className": "syntax-property"
+      },
+      {
+        "start": 132,
+        "end": 149,
+        "className": "syntax-property"
+      },
+      {
+        "start": 170,
+        "end": 171,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 172,
+        "end": 176,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 176,
+        "end": 178,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 178,
+        "end": 185,
+        "className": "syntax-property"
+      },
+      {
+        "start": 186,
+        "end": 195,
+        "className": "syntax-property"
+      },
+      {
+        "start": 200,
+        "end": 203,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 215,
+        "end": 218,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 219,
+        "end": 230,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 231,
+        "end": 232,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 233,
+        "end": 240,
+        "className": "syntax-number"
+      },
+      {
+        "start": 251,
+        "end": 261,
+        "className": "syntax-type"
+      },
+      {
+        "start": 262,
+        "end": 270,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 271,
+        "end": 272,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 273,
+        "end": 276,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 278,
+        "end": 283,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 294,
+        "end": 310,
+        "className": "syntax-type"
+      },
+      {
+        "start": 311,
+        "end": 316,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 317,
+        "end": 321,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 323,
+        "end": 326,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 339,
+        "end": 349,
+        "className": "syntax-type"
+      },
+      {
+        "start": 349,
+        "end": 350,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 351,
+        "end": 359,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 360,
+        "end": 361,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 362,
+        "end": 367,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 368,
+        "end": 374,
+        "className": "syntax-function"
+      },
+      {
+        "start": 378,
+        "end": 384,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 395,
+        "end": 400,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 401,
+        "end": 410,
+        "className": "syntax-type"
+      },
+      {
+        "start": 411,
+        "end": 424,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 425,
+        "end": 426,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 427,
+        "end": 430,
+        "className": "syntax-function"
+      },
+      {
+        "start": 433,
+        "end": 434,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 435,
+        "end": 445,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 457,
+        "end": 464,
+        "className": "syntax-type"
+      },
+      {
+        "start": 465,
+        "end": 477,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 478,
+        "end": 482,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 482,
+        "end": 484,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 484,
+        "end": 491,
+        "className": "syntax-property"
+      },
+      {
+        "start": 492,
+        "end": 501,
+        "className": "syntax-property"
+      },
+      {
+        "start": 514,
+        "end": 516,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 518,
+        "end": 531,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 532,
+        "end": 533,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 534,
+        "end": 537,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 567,
+        "end": 594,
+        "className": "syntax-function"
+      },
+      {
+        "start": 595,
+        "end": 598,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 620,
+        "end": 642,
+        "className": "syntax-function"
+      },
+      {
+        "start": 643,
+        "end": 655,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 656,
+        "end": 657,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 658,
+        "end": 661,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 705,
+        "end": 717,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 761,
+        "end": 773,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 817,
+        "end": 836,
+        "className": "syntax-function"
+      },
+      {
+        "start": 855,
+        "end": 859,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 859,
+        "end": 861,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 861,
+        "end": 868,
+        "className": "syntax-property"
+      },
+      {
+        "start": 869,
+        "end": 878,
+        "className": "syntax-property"
+      },
+      {
+        "start": 879,
+        "end": 881,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 882,
+        "end": 885,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 901,
+        "end": 928,
+        "className": "syntax-function"
+      },
+      {
+        "start": 929,
+        "end": 932,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 949,
+        "end": 972,
+        "className": "syntax-function"
+      },
+      {
+        "start": 973,
+        "end": 983,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 984,
+        "end": 988,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1030,
+        "end": 1042,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1043,
+        "end": 1044,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1045,
+        "end": 1048,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1050,
+        "end": 1062,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1084,
+        "end": 1088,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1089,
+        "end": 1099,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1100,
+        "end": 1104,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1108,
+        "end": 1118,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1119,
+        "end": 1123,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1126,
+        "end": 1127,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1128,
+        "end": 1131,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1157,
+        "end": 1165,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1192,
+        "end": 1196,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1225,
+        "end": 1252,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1253,
+        "end": 1256,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1273,
+        "end": 1277,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1277,
+        "end": 1279,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1279,
+        "end": 1286,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1287,
+        "end": 1296,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1297,
+        "end": 1298,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1320,
+        "end": 1344,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1345,
+        "end": 1357,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1405,
+        "end": 1408,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1409,
+        "end": 1410,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1411,
+        "end": 1424,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1472,
+        "end": 1480,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1528,
+        "end": 1547,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1566,
+        "end": 1593,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1594,
+        "end": 1597,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1598,
+        "end": 1599,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1600,
+        "end": 1613,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1635,
+        "end": 1657,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1658,
+        "end": 1668,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1669,
+        "end": 1673,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1677,
+        "end": 1689,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1733,
+        "end": 1737,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1737,
+        "end": 1739,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1739,
+        "end": 1746,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1747,
+        "end": 1756,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1800,
+        "end": 1819,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1838,
+        "end": 1842,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1842,
+        "end": 1844,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1844,
+        "end": 1851,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1852,
+        "end": 1861,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1862,
+        "end": 1864,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1865,
+        "end": 1878,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1894,
+        "end": 1921,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1922,
+        "end": 1935,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1957,
+        "end": 1961,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1962,
+        "end": 1972,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1973,
+        "end": 1977,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1981,
+        "end": 1993,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1995,
+        "end": 2003,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2036,
+        "end": 2040,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2061,
+        "end": 2126,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2137,
+        "end": 2201,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2212,
+        "end": 2219,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2220,
+        "end": 2231,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2232,
+        "end": 2233,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2234,
+        "end": 2238,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2238,
+        "end": 2240,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2240,
+        "end": 2247,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2248,
+        "end": 2256,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2268,
+        "end": 2275,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2276,
+        "end": 2288,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2289,
+        "end": 2290,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2291,
+        "end": 2295,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2295,
+        "end": 2297,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2297,
+        "end": 2304,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2305,
+        "end": 2314,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2326,
+        "end": 2331,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2332,
+        "end": 2339,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2340,
+        "end": 2345,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2346,
+        "end": 2347,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2348,
+        "end": 2358,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2359,
+        "end": 2363,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2378,
+        "end": 2383,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2384,
+        "end": 2393,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2394,
+        "end": 2399,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2400,
+        "end": 2401,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2414,
+        "end": 2426,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2427,
+        "end": 2430,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2432,
+        "end": 2456,
+        "className": "syntax-string"
+      },
+      {
+        "start": 2469,
+        "end": 2474,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2475,
+        "end": 2484,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2485,
+        "end": 2499,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2500,
+        "end": 2501,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2502,
+        "end": 2507,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2508,
+        "end": 2509,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2510,
+        "end": 2521,
+        "className": "syntax-variable"
       },
       {
         "start": 2533,
-        "end": 2550,
-        "className": "syntax-property"
+        "end": 2540,
+        "className": "syntax-type"
       },
       {
-        "start": 2551,
+        "start": 2541,
         "end": 2552,
-        "className": "syntax-operator"
+        "className": "syntax-variable"
       },
       {
         "start": 2553,
@@ -16919,166 +18101,1203 @@ export const codeSnippets = [
       },
       {
         "start": 2559,
-        "end": 2566,
-        "className": "syntax-property"
+        "end": 2570,
+        "className": "syntax-function"
       },
       {
-        "start": 2567,
-        "end": 2575,
-        "className": "syntax-property"
+        "start": 2571,
+        "end": 2576,
+        "className": "syntax-variable"
       },
       {
-        "start": 2576,
-        "end": 2577,
+        "start": 2590,
+        "end": 2597,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2598,
+        "end": 2610,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2611,
+        "end": 2622,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2669,
+        "end": 2700,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2720,
+        "end": 2744,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2745,
+        "end": 2756,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2757,
+        "end": 2758,
         "className": "syntax-operator"
       },
       {
-        "start": 2578,
-        "end": 2584,
+        "start": 2759,
+        "end": 2773,
         "className": "syntax-variable"
       },
       {
-        "start": 2610,
-        "end": 2614,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2615,
-        "end": 2617,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2619,
-        "end": 2623,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2629,
-        "end": 2635,
+        "start": 2819,
+        "end": 2822,
         "className": "syntax-variable"
       },
       {
-        "start": 2670,
-        "end": 2678,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2684,
-        "end": 2688,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2689,
-        "end": 2692,
+        "start": 2824,
+        "end": 2827,
         "className": "syntax-variable"
       },
       {
-        "start": 2693,
-        "end": 2698,
+        "start": 2873,
+        "end": 2892,
         "className": "syntax-function"
       },
       {
-        "start": 2702,
-        "end": 2705,
+        "start": 2911,
+        "end": 2923,
         "className": "syntax-variable"
       },
       {
-        "start": 2706,
-        "end": 2709,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2713,
-        "end": 2718,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2751,
-        "end": 2754,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2758,
-        "end": 2777,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2806,
-        "end": 2810,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2844,
-        "end": 2848,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2849,
-        "end": 2852,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2853,
-        "end": 2860,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2861,
-        "end": 2869,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2871,
-        "end": 2874,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2875,
-        "end": 2882,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2883,
-        "end": 2891,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2892,
-        "end": 2893,
+        "start": 2924,
+        "end": 2925,
         "className": "syntax-operator"
-      },
-      {
-        "start": 2894,
-        "end": 2898,
-        "className": "syntax-function"
       },
       {
         "start": 2926,
-        "end": 2930,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2930,
-        "end": 2932,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2932,
-        "end": 2939,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2940,
-        "end": 2948,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2970,
-        "end": 2992,
+        "end": 2933,
         "className": "syntax-function"
       },
       {
-        "start": 2993,
+        "start": 2952,
+        "end": 2964,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2981,
+        "end": 2982,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2988,
+        "end": 3022,
+        "className": "syntax-function"
+      },
+      {
+        "start": 3040,
+        "end": 3051,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 3053,
+        "end": 3058,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 3060,
+        "end": 3071,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 3073,
+        "end": 3092,
+        "className": "syntax-function"
+      },
+      {
+        "start": 3112,
+        "end": 3124,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 3125,
+        "end": 3127,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 3128,
+        "end": 3131,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 3148,
+        "end": 3160,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 3177,
+        "end": 3178,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 3184,
+        "end": 3218,
+        "className": "syntax-function"
+      },
+      {
+        "start": 3236,
+        "end": 3241,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 3243,
+        "end": 3255,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 3257,
+        "end": 3269,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 3271,
+        "end": 3290,
+        "className": "syntax-function"
+      }
+    ]
+  },
+  {
+    "language": "cpp",
+    "name": "cpp/libstdcxx_vector_realloc_insert.cpp",
+    "code": "_M_realloc_insert(iterator __position, _Args&&... __args)\n#else\ntemplate<typename _Tp, typename _Alloc>\nvoid\nvector<_Tp, _Alloc>::\n_M_realloc_insert(iterator __position, const _Tp& __x)\n#endif\n{\nconst size_type __len = _M_check_len(1u, \"vector::_M_realloc_insert\");\nif (__len <= 0)\n  __builtin_unreachable ();\npointer __old_start = this->_M_impl._M_start;\npointer __old_finish = this->_M_impl._M_finish;\nconst size_type __elems_before = __position - begin();\npointer __new_start(this->_M_allocate(__len));\npointer __new_finish(__new_start);\n\n{\n  _Guard_alloc __guard(__new_start, __len, *this);\n\n  // The order of the three operations is dictated by the C++11\n  // case, where the moves could alter a new element belonging\n  // to the existing vector.  This is an issue only for callers\n  // taking the element by lvalue ref (see last bullet of C++11\n  // [res.on.arguments]).\n\n  // If this throws, the existing elements are unchanged.\n#if __cplusplus >= 201103L\n  _Alloc_traits::construct(this->_M_impl,\n                           std::__to_address(__new_start + __elems_before),\n                           std::forward<_Args>(__args)...);\n#else\n  _Alloc_traits::construct(this->_M_impl,\n                           __new_start + __elems_before,\n                           __x);\n#endif\n\n#if __cplusplus >= 201103L\n  if _GLIBCXX17_CONSTEXPR (_S_use_relocate())\n    {\n      // Relocation cannot throw.\n      __new_finish = _S_relocate(__old_start, __position.base(),\n                                 __new_start, _M_get_Tp_allocator());\n      ++__new_finish;\n      __new_finish = _S_relocate(__position.base(), __old_finish,\n                                 __new_finish, _M_get_Tp_allocator());\n    }\n  else\n#endif\n    {\n      // RAII type to destroy initialized elements.\n      struct _Guard_elts\n      {\n        pointer _M_first, _M_last;  // Elements to destroy\n        _Tp_alloc_type& _M_alloc;\n\n        _GLIBCXX20_CONSTEXPR\n        _Guard_elts(pointer __elt, _Tp_alloc_type& __a)\n        : _M_first(__elt), _M_last(__elt + 1), _M_alloc(__a)\n        { }\n\n        _GLIBCXX20_CONSTEXPR\n        ~_Guard_elts()\n        { std::_Destroy(_M_first, _M_last, _M_alloc); }\n\n      private:\n        _Guard_elts(const _Guard_elts&);\n      };\n\n      // Guard the new element so it will be destroyed if anything throws.\n      _Guard_elts __guard_elts(__new_start + __elems_before, _M_impl);\n\n      __new_finish = std::__uninitialized_move_if_noexcept_a(\n                       __old_start, __position.base(),\n                       __new_start, _M_get_Tp_allocator());\n\n      ++__new_finish;\n      // Guard everything before the new element too.\n      __guard_elts._M_first = __new_start;\n\n      __new_finish = std::__uninitialized_move_if_noexcept_a(\n                        __position.base(), __old_finish,\n                        __new_finish, _M_get_Tp_allocator());\n\n      // New storage has been fully initialized, destroy the old elements.\n      __guard_elts._M_first = __old_start;\n      __guard_elts._M_last = __old_finish;\n    }",
+    "spans": [
+      {
+        "start": 0,
+        "end": 17,
+        "className": "syntax-function"
+      },
+      {
+        "start": 18,
+        "end": 26,
+        "className": "syntax-type"
+      },
+      {
+        "start": 27,
+        "end": 37,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 39,
+        "end": 44,
+        "className": "syntax-type"
+      },
+      {
+        "start": 44,
+        "end": 46,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 50,
+        "end": 56,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 58,
+        "end": 63,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 64,
+        "end": 72,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 72,
+        "end": 73,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 73,
+        "end": 81,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 82,
+        "end": 85,
+        "className": "syntax-type"
+      },
+      {
+        "start": 87,
+        "end": 95,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 96,
+        "end": 102,
+        "className": "syntax-type"
+      },
+      {
+        "start": 102,
+        "end": 103,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 104,
+        "end": 108,
+        "className": "syntax-type"
+      },
+      {
+        "start": 109,
+        "end": 115,
+        "className": "syntax-type"
+      },
+      {
+        "start": 115,
+        "end": 116,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 116,
+        "end": 119,
+        "className": "syntax-type"
+      },
+      {
+        "start": 121,
+        "end": 127,
+        "className": "syntax-type"
+      },
+      {
+        "start": 127,
+        "end": 128,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 131,
+        "end": 148,
+        "className": "syntax-function"
+      },
+      {
+        "start": 149,
+        "end": 157,
+        "className": "syntax-type"
+      },
+      {
+        "start": 158,
+        "end": 168,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 170,
+        "end": 175,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 176,
+        "end": 179,
+        "className": "syntax-type"
+      },
+      {
+        "start": 179,
+        "end": 180,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 181,
+        "end": 184,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 186,
+        "end": 192,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 195,
+        "end": 200,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 201,
+        "end": 210,
+        "className": "syntax-type"
+      },
+      {
+        "start": 211,
+        "end": 216,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 217,
+        "end": 218,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 219,
+        "end": 231,
+        "className": "syntax-function"
+      },
+      {
+        "start": 232,
+        "end": 234,
+        "className": "syntax-number"
+      },
+      {
+        "start": 236,
+        "end": 263,
+        "className": "syntax-string"
+      },
+      {
+        "start": 266,
+        "end": 268,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 270,
+        "end": 275,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 279,
+        "end": 280,
+        "className": "syntax-number"
+      },
+      {
+        "start": 284,
+        "end": 305,
+        "className": "syntax-function"
+      },
+      {
+        "start": 310,
+        "end": 317,
+        "className": "syntax-type"
+      },
+      {
+        "start": 318,
+        "end": 329,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 330,
+        "end": 331,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 332,
+        "end": 336,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 336,
+        "end": 338,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 338,
+        "end": 345,
+        "className": "syntax-property"
+      },
+      {
+        "start": 346,
+        "end": 354,
+        "className": "syntax-property"
+      },
+      {
+        "start": 356,
+        "end": 363,
+        "className": "syntax-type"
+      },
+      {
+        "start": 364,
+        "end": 376,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 377,
+        "end": 378,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 379,
+        "end": 383,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 383,
+        "end": 385,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 385,
+        "end": 392,
+        "className": "syntax-property"
+      },
+      {
+        "start": 393,
+        "end": 402,
+        "className": "syntax-property"
+      },
+      {
+        "start": 404,
+        "end": 409,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 410,
+        "end": 419,
+        "className": "syntax-type"
+      },
+      {
+        "start": 420,
+        "end": 434,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 435,
+        "end": 436,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 437,
+        "end": 447,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 448,
+        "end": 449,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 450,
+        "end": 455,
+        "className": "syntax-function"
+      },
+      {
+        "start": 459,
+        "end": 466,
+        "className": "syntax-type"
+      },
+      {
+        "start": 467,
+        "end": 478,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 479,
+        "end": 483,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 483,
+        "end": 485,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 485,
+        "end": 496,
+        "className": "syntax-function"
+      },
+      {
+        "start": 497,
+        "end": 502,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 506,
+        "end": 513,
+        "className": "syntax-type"
+      },
+      {
+        "start": 514,
+        "end": 526,
+        "className": "syntax-function"
+      },
+      {
+        "start": 527,
+        "end": 538,
+        "className": "syntax-type"
+      },
+      {
+        "start": 546,
+        "end": 558,
+        "className": "syntax-type"
+      },
+      {
+        "start": 559,
+        "end": 566,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 567,
+        "end": 578,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 580,
+        "end": 585,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 587,
+        "end": 588,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 588,
+        "end": 592,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 598,
+        "end": 659,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 662,
+        "end": 722,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 725,
+        "end": 786,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 789,
+        "end": 850,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 853,
+        "end": 876,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 880,
+        "end": 935,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 936,
+        "end": 939,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 940,
+        "end": 951,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 955,
+        "end": 962,
+        "className": "syntax-number"
+      },
+      {
+        "start": 980,
+        "end": 989,
+        "className": "syntax-function"
+      },
+      {
+        "start": 990,
+        "end": 994,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 994,
+        "end": 996,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 996,
+        "end": 1003,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1037,
+        "end": 1049,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1050,
+        "end": 1061,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1062,
+        "end": 1063,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1064,
+        "end": 1078,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1113,
+        "end": 1120,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1120,
+        "end": 1121,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1121,
+        "end": 1126,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1126,
+        "end": 1127,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1128,
+        "end": 1134,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1141,
+        "end": 1146,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1164,
+        "end": 1173,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1174,
+        "end": 1178,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1178,
+        "end": 1180,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1180,
+        "end": 1187,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1216,
+        "end": 1227,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1228,
+        "end": 1229,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1230,
+        "end": 1244,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1273,
+        "end": 1276,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1279,
+        "end": 1285,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1287,
+        "end": 1290,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1291,
+        "end": 1302,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1306,
+        "end": 1313,
+        "className": "syntax-number"
+      },
+      {
+        "start": 1316,
+        "end": 1318,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1319,
+        "end": 1339,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1341,
+        "end": 1356,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1372,
+        "end": 1399,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 1406,
+        "end": 1418,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1419,
+        "end": 1420,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1421,
+        "end": 1432,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1433,
+        "end": 1444,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1446,
+        "end": 1456,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1457,
+        "end": 1461,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1498,
+        "end": 1509,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1511,
+        "end": 1530,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1541,
+        "end": 1543,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1543,
+        "end": 1555,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1563,
+        "end": 1575,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1576,
+        "end": 1577,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1578,
+        "end": 1589,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1590,
+        "end": 1600,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1601,
+        "end": 1605,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1609,
+        "end": 1621,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1656,
+        "end": 1668,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1670,
+        "end": 1689,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1702,
+        "end": 1706,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1707,
+        "end": 1713,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1726,
+        "end": 1771,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 1778,
+        "end": 1784,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1785,
+        "end": 1796,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1813,
+        "end": 1820,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1821,
+        "end": 1829,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1831,
+        "end": 1838,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1841,
+        "end": 1863,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 1872,
+        "end": 1886,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1886,
+        "end": 1887,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1888,
+        "end": 1896,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1907,
+        "end": 1927,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1936,
+        "end": 1947,
+        "className": "syntax-function"
+      },
+      {
+        "start": 1948,
+        "end": 1955,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1956,
+        "end": 1961,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1963,
+        "end": 1977,
+        "className": "syntax-type"
+      },
+      {
+        "start": 1977,
+        "end": 1978,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1979,
+        "end": 1982,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1994,
+        "end": 2002,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2003,
+        "end": 2008,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2011,
+        "end": 2018,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2019,
+        "end": 2024,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2025,
+        "end": 2026,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2027,
+        "end": 2028,
+        "className": "syntax-number"
+      },
+      {
+        "start": 2031,
+        "end": 2039,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2040,
+        "end": 2043,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2066,
+        "end": 2086,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2096,
+        "end": 2107,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2125,
+        "end": 2133,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2134,
+        "end": 2142,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2144,
+        "end": 2151,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2153,
+        "end": 2161,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2173,
+        "end": 2180,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2190,
+        "end": 2201,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2202,
+        "end": 2207,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2208,
+        "end": 2219,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2219,
+        "end": 2220,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2239,
+        "end": 2307,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2314,
+        "end": 2325,
+        "className": "syntax-type"
+      },
+      {
+        "start": 2326,
+        "end": 2338,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2339,
+        "end": 2350,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2351,
+        "end": 2352,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2353,
+        "end": 2367,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2369,
+        "end": 2376,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2386,
+        "end": 2398,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2399,
+        "end": 2400,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2406,
+        "end": 2440,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2465,
+        "end": 2476,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2478,
+        "end": 2488,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2489,
+        "end": 2493,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2520,
+        "end": 2531,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2533,
+        "end": 2552,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2564,
+        "end": 2566,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2566,
+        "end": 2578,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2586,
+        "end": 2633,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2640,
+        "end": 2652,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2653,
+        "end": 2661,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2662,
+        "end": 2663,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2664,
+        "end": 2675,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2684,
+        "end": 2696,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2697,
+        "end": 2698,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2704,
+        "end": 2738,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2764,
+        "end": 2774,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2775,
+        "end": 2779,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2783,
+        "end": 2795,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2821,
+        "end": 2833,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2835,
+        "end": 2854,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2866,
+        "end": 2934,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2941,
+        "end": 2953,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2954,
+        "end": 2962,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2963,
+        "end": 2964,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2965,
+        "end": 2976,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2984,
         "end": 2996,
         "className": "syntax-variable"
       },
@@ -17089,2231 +19308,12 @@ export const codeSnippets = [
       },
       {
         "start": 3005,
-        "end": 3013,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3014,
-        "end": 3015,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3016,
-        "end": 3020,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3066,
-        "end": 3069,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3070,
-        "end": 3077,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3078,
-        "end": 3087,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3131,
-        "end": 3135,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3135,
-        "end": 3137,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3137,
-        "end": 3144,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3145,
-        "end": 3154,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3198,
-        "end": 3217,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3246,
-        "end": 3250,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3250,
-        "end": 3252,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3252,
-        "end": 3259,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3260,
-        "end": 3269,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3270,
-        "end": 3271,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3272,
-        "end": 3276,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3276,
-        "end": 3278,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3278,
-        "end": 3285,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3286,
-        "end": 3294,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3295,
-        "end": 3296,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3297,
-        "end": 3303,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3321,
-        "end": 3327,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3328,
-        "end": 3329,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3329,
-        "end": 3333,
-        "className": "syntax-variable"
-      }
-    ]
-  },
-  {
-    "language": "cpp",
-    "name": "cpp/libstdcxx_vector_fill_insert.cpp",
-    "code": "    _M_fill_insert(iterator __position, size_type __n, const value_type& __x)\n    {\n      if (__n != 0)\n        {\n          if (size_type(this->_M_impl._M_end_of_storage\n                        - this->_M_impl._M_finish) >= __n)\n            {\n#if __cplusplus < 201103L\n              value_type __x_copy = __x;\n#else\n              _Temporary_value __tmp(this, __x);\n              value_type& __x_copy = __tmp._M_val();\n#endif\n              const size_type __elems_after = end() - __position;\n              pointer __old_finish(this->_M_impl._M_finish);\n              if (__elems_after > __n)\n                {\n                  _GLIBCXX_ASAN_ANNOTATE_GROW(__n);\n                  std::__uninitialized_move_a(__old_finish - __n,\n                                              __old_finish,\n                                              __old_finish,\n                                              _M_get_Tp_allocator());\n                  this->_M_impl._M_finish += __n;\n                  _GLIBCXX_ASAN_ANNOTATE_GREW(__n);\n                  _GLIBCXX_MOVE_BACKWARD3(__position.base(),\n                                          __old_finish - __n, __old_finish);\n                  std::fill(__position.base(), __position.base() + __n,\n                            __x_copy);\n                }\n              else\n                {\n                  _GLIBCXX_ASAN_ANNOTATE_GROW(__n);\n                  this->_M_impl._M_finish =\n                    std::__uninitialized_fill_n_a(__old_finish,\n                                                  __n - __elems_after,\n                                                  __x_copy,\n                                                  _M_get_Tp_allocator());\n                  _GLIBCXX_ASAN_ANNOTATE_GREW(__n - __elems_after);\n                  std::__uninitialized_move_a(__position.base(), __old_finish,\n                                              this->_M_impl._M_finish,\n                                              _M_get_Tp_allocator());\n                  this->_M_impl._M_finish += __elems_after;\n                  _GLIBCXX_ASAN_ANNOTATE_GREW(__elems_after);\n                  std::fill(__position.base(), __old_finish, __x_copy);\n                }\n            }\n          else\n            {\n              // Make local copies of these members because the compiler thinks\n              // the allocator can alter them if 'this' is globally reachable.\n              pointer __old_start = this->_M_impl._M_start;\n              pointer __old_finish = this->_M_impl._M_finish;\n              const pointer __pos = __position.base();\n\n              const size_type __len =\n                _M_check_len(__n, \"vector::_M_fill_insert\");\n              const size_type __elems_before = __pos - __old_start;\n              pointer __new_start(this->_M_allocate(__len));\n              pointer __new_finish(__new_start);\n              __try\n                {\n                  // See _M_realloc_insert above.\n                  std::__uninitialized_fill_n_a(__new_start + __elems_before,\n                                                __n, __x,\n                                                _M_get_Tp_allocator());\n                  __new_finish = pointer();\n\n                  __new_finish\n                    = std::__uninitialized_move_if_noexcept_a\n                    (__old_start, __pos, __new_start, _M_get_Tp_allocator());\n\n                  __new_finish += __n;\n\n                  __new_finish\n                    = std::__uninitialized_move_if_noexcept_a\n                    (__pos, __old_finish, __new_finish, _M_get_Tp_allocator());\n                }",
-    "spans": [
-      {
-        "start": 4,
-        "end": 18,
-        "className": "syntax-function"
-      },
-      {
-        "start": 19,
-        "end": 27,
-        "className": "syntax-type"
-      },
-      {
-        "start": 28,
-        "end": 38,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 40,
-        "end": 49,
-        "className": "syntax-type"
-      },
-      {
-        "start": 50,
-        "end": 53,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 55,
-        "end": 60,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 61,
-        "end": 71,
-        "className": "syntax-type"
-      },
-      {
-        "start": 71,
-        "end": 72,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 73,
-        "end": 76,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 90,
-        "end": 92,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 94,
-        "end": 97,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 98,
-        "end": 100,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 101,
-        "end": 102,
-        "className": "syntax-number"
-      },
-      {
-        "start": 124,
-        "end": 126,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 128,
-        "end": 137,
-        "className": "syntax-function"
-      },
-      {
-        "start": 138,
-        "end": 142,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 142,
-        "end": 144,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 144,
-        "end": 151,
-        "className": "syntax-property"
-      },
-      {
-        "start": 152,
-        "end": 169,
-        "className": "syntax-property"
-      },
-      {
-        "start": 194,
-        "end": 195,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 196,
-        "end": 200,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 200,
-        "end": 202,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 202,
-        "end": 209,
-        "className": "syntax-property"
-      },
-      {
-        "start": 210,
-        "end": 219,
-        "className": "syntax-property"
-      },
-      {
-        "start": 224,
-        "end": 227,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 243,
-        "end": 246,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 247,
-        "end": 258,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 259,
-        "end": 260,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 261,
-        "end": 268,
-        "className": "syntax-number"
-      },
-      {
-        "start": 283,
-        "end": 293,
-        "className": "syntax-type"
-      },
-      {
-        "start": 294,
-        "end": 302,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 303,
-        "end": 304,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 305,
-        "end": 308,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 310,
-        "end": 315,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 330,
-        "end": 346,
-        "className": "syntax-type"
-      },
-      {
-        "start": 347,
-        "end": 352,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 353,
-        "end": 357,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 359,
-        "end": 362,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 379,
-        "end": 389,
-        "className": "syntax-type"
-      },
-      {
-        "start": 389,
-        "end": 390,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 391,
-        "end": 399,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 400,
-        "end": 401,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 402,
-        "end": 407,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 408,
-        "end": 414,
-        "className": "syntax-function"
-      },
-      {
-        "start": 418,
-        "end": 424,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 439,
-        "end": 444,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 445,
-        "end": 454,
-        "className": "syntax-type"
-      },
-      {
-        "start": 455,
-        "end": 468,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 469,
-        "end": 470,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 471,
-        "end": 474,
-        "className": "syntax-function"
-      },
-      {
-        "start": 477,
-        "end": 478,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 479,
-        "end": 489,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 505,
-        "end": 512,
-        "className": "syntax-type"
-      },
-      {
-        "start": 513,
-        "end": 525,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 526,
-        "end": 530,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 530,
-        "end": 532,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 532,
-        "end": 539,
-        "className": "syntax-property"
-      },
-      {
-        "start": 540,
-        "end": 549,
-        "className": "syntax-property"
-      },
-      {
-        "start": 566,
-        "end": 568,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 570,
-        "end": 583,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 584,
-        "end": 585,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 586,
-        "end": 589,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 627,
-        "end": 654,
-        "className": "syntax-function"
-      },
-      {
-        "start": 655,
-        "end": 658,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 684,
-        "end": 706,
-        "className": "syntax-function"
-      },
-      {
-        "start": 707,
-        "end": 719,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 720,
-        "end": 721,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 722,
-        "end": 725,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 773,
-        "end": 785,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 833,
-        "end": 845,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 893,
-        "end": 912,
-        "className": "syntax-function"
-      },
-      {
-        "start": 935,
-        "end": 939,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 939,
-        "end": 941,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 941,
-        "end": 948,
-        "className": "syntax-property"
-      },
-      {
-        "start": 949,
-        "end": 958,
-        "className": "syntax-property"
-      },
-      {
-        "start": 959,
-        "end": 961,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 962,
-        "end": 965,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 985,
-        "end": 1012,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1013,
-        "end": 1016,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1037,
-        "end": 1060,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1061,
-        "end": 1071,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1072,
-        "end": 1076,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1122,
-        "end": 1134,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1135,
-        "end": 1136,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1137,
-        "end": 1140,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1142,
-        "end": 1154,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1180,
-        "end": 1184,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1185,
-        "end": 1195,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1196,
-        "end": 1200,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1204,
-        "end": 1214,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1215,
-        "end": 1219,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1222,
-        "end": 1223,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1224,
-        "end": 1227,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1257,
-        "end": 1265,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1300,
-        "end": 1304,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1341,
-        "end": 1368,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1369,
-        "end": 1372,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1393,
-        "end": 1397,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1397,
-        "end": 1399,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1399,
-        "end": 1406,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1407,
-        "end": 1416,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1417,
-        "end": 1418,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1444,
-        "end": 1468,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1469,
-        "end": 1481,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1533,
-        "end": 1536,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1537,
-        "end": 1538,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1539,
-        "end": 1552,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1604,
-        "end": 1612,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1664,
-        "end": 1683,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1706,
-        "end": 1733,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1734,
-        "end": 1737,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1738,
-        "end": 1739,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1740,
-        "end": 1753,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1779,
-        "end": 1801,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1802,
-        "end": 1812,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1813,
-        "end": 1817,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1821,
-        "end": 1833,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1881,
-        "end": 1885,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1885,
-        "end": 1887,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1887,
-        "end": 1894,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1895,
-        "end": 1904,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1952,
-        "end": 1971,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1994,
-        "end": 1998,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1998,
-        "end": 2000,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2000,
-        "end": 2007,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2008,
-        "end": 2017,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2018,
-        "end": 2020,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2021,
-        "end": 2034,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2054,
-        "end": 2081,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2082,
-        "end": 2095,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2121,
-        "end": 2125,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2126,
-        "end": 2136,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2137,
-        "end": 2141,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2145,
-        "end": 2157,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2159,
-        "end": 2167,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2212,
-        "end": 2216,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2245,
-        "end": 2310,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2325,
-        "end": 2389,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2404,
-        "end": 2411,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2412,
-        "end": 2423,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2424,
-        "end": 2425,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2426,
-        "end": 2430,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2430,
-        "end": 2432,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2432,
-        "end": 2439,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2440,
-        "end": 2448,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2464,
-        "end": 2471,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2472,
-        "end": 2484,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2485,
-        "end": 2486,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2487,
-        "end": 2491,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2491,
-        "end": 2493,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2493,
-        "end": 2500,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2501,
-        "end": 2510,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2526,
-        "end": 2531,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2532,
-        "end": 2539,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2540,
-        "end": 2545,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2546,
-        "end": 2547,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2548,
-        "end": 2558,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2559,
-        "end": 2563,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2582,
-        "end": 2587,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2588,
-        "end": 2597,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2598,
-        "end": 2603,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2604,
-        "end": 2605,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2622,
-        "end": 2634,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2635,
-        "end": 2638,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2640,
-        "end": 2664,
-        "className": "syntax-string"
-      },
-      {
-        "start": 2681,
-        "end": 2686,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2687,
-        "end": 2696,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2697,
-        "end": 2711,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2712,
-        "end": 2713,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2714,
-        "end": 2719,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2720,
-        "end": 2721,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2722,
-        "end": 2733,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2749,
-        "end": 2756,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2757,
-        "end": 2768,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2769,
-        "end": 2773,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2773,
-        "end": 2775,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2775,
-        "end": 2786,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2787,
-        "end": 2792,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2810,
-        "end": 2817,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2818,
-        "end": 2830,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2831,
-        "end": 2842,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2901,
-        "end": 2932,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2956,
-        "end": 2980,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2981,
-        "end": 2992,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2993,
-        "end": 2994,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2995,
-        "end": 3009,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3059,
-        "end": 3062,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3064,
-        "end": 3067,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3117,
-        "end": 3136,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3159,
-        "end": 3171,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3172,
-        "end": 3173,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3174,
-        "end": 3181,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3204,
-        "end": 3216,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3237,
-        "end": 3238,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3244,
-        "end": 3278,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3300,
-        "end": 3311,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3313,
-        "end": 3318,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3320,
-        "end": 3331,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3333,
-        "end": 3352,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3376,
-        "end": 3388,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3389,
-        "end": 3391,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3392,
-        "end": 3395,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3416,
-        "end": 3428,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3449,
-        "end": 3450,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3456,
-        "end": 3490,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3512,
-        "end": 3517,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3519,
-        "end": 3531,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3533,
-        "end": 3545,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3547,
-        "end": 3566,
-        "className": "syntax-function"
-      }
-    ]
-  },
-  {
-    "language": "cpp",
-    "name": "cpp/libstdcxx_vector_realloc_insert.cpp",
-    "code": "      _M_realloc_insert(iterator __position, _Args&&... __args)\n#else\n  template<typename _Tp, typename _Alloc>\n    void\n    vector<_Tp, _Alloc>::\n    _M_realloc_insert(iterator __position, const _Tp& __x)\n#endif\n    {\n      const size_type __len = _M_check_len(1u, \"vector::_M_realloc_insert\");\n      if (__len <= 0)\n        __builtin_unreachable ();\n      pointer __old_start = this->_M_impl._M_start;\n      pointer __old_finish = this->_M_impl._M_finish;\n      const size_type __elems_before = __position - begin();\n      pointer __new_start(this->_M_allocate(__len));\n      pointer __new_finish(__new_start);\n\n      {\n        _Guard_alloc __guard(__new_start, __len, *this);\n\n        // The order of the three operations is dictated by the C++11\n        // case, where the moves could alter a new element belonging\n        // to the existing vector.  This is an issue only for callers\n        // taking the element by lvalue ref (see last bullet of C++11\n        // [res.on.arguments]).\n\n        // If this throws, the existing elements are unchanged.\n#if __cplusplus >= 201103L\n        _Alloc_traits::construct(this->_M_impl,\n                                 std::__to_address(__new_start + __elems_before),\n                                 std::forward<_Args>(__args)...);\n#else\n        _Alloc_traits::construct(this->_M_impl,\n                                 __new_start + __elems_before,\n                                 __x);\n#endif\n\n#if __cplusplus >= 201103L\n        if _GLIBCXX17_CONSTEXPR (_S_use_relocate())\n          {\n            // Relocation cannot throw.\n            __new_finish = _S_relocate(__old_start, __position.base(),\n                                       __new_start, _M_get_Tp_allocator());\n            ++__new_finish;\n            __new_finish = _S_relocate(__position.base(), __old_finish,\n                                       __new_finish, _M_get_Tp_allocator());\n          }\n        else\n#endif\n          {\n            // RAII type to destroy initialized elements.\n            struct _Guard_elts\n            {\n              pointer _M_first, _M_last;  // Elements to destroy\n              _Tp_alloc_type& _M_alloc;\n\n              _GLIBCXX20_CONSTEXPR\n              _Guard_elts(pointer __elt, _Tp_alloc_type& __a)\n              : _M_first(__elt), _M_last(__elt + 1), _M_alloc(__a)\n              { }\n\n              _GLIBCXX20_CONSTEXPR\n              ~_Guard_elts()\n              { std::_Destroy(_M_first, _M_last, _M_alloc); }\n\n            private:\n              _Guard_elts(const _Guard_elts&);\n            };\n\n            // Guard the new element so it will be destroyed if anything throws.\n            _Guard_elts __guard_elts(__new_start + __elems_before, _M_impl);\n\n            __new_finish = std::__uninitialized_move_if_noexcept_a(\n                             __old_start, __position.base(),\n                             __new_start, _M_get_Tp_allocator());\n\n            ++__new_finish;\n            // Guard everything before the new element too.\n            __guard_elts._M_first = __new_start;\n\n            __new_finish = std::__uninitialized_move_if_noexcept_a(\n                              __position.base(), __old_finish,\n                              __new_finish, _M_get_Tp_allocator());\n\n            // New storage has been fully initialized, destroy the old elements.\n            __guard_elts._M_first = __old_start;\n            __guard_elts._M_last = __old_finish;\n          }",
-    "spans": [
-      {
-        "start": 6,
-        "end": 23,
-        "className": "syntax-function"
-      },
-      {
-        "start": 24,
-        "end": 32,
-        "className": "syntax-type"
-      },
-      {
-        "start": 33,
-        "end": 43,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 45,
-        "end": 50,
-        "className": "syntax-type"
-      },
-      {
-        "start": 50,
-        "end": 52,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 56,
-        "end": 62,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 64,
-        "end": 69,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 72,
-        "end": 80,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 80,
-        "end": 81,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 81,
-        "end": 89,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 90,
-        "end": 93,
-        "className": "syntax-type"
-      },
-      {
-        "start": 95,
-        "end": 103,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 104,
-        "end": 110,
-        "className": "syntax-type"
-      },
-      {
-        "start": 110,
-        "end": 111,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 116,
-        "end": 120,
-        "className": "syntax-type"
-      },
-      {
-        "start": 125,
-        "end": 131,
-        "className": "syntax-type"
-      },
-      {
-        "start": 131,
-        "end": 132,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 132,
-        "end": 135,
-        "className": "syntax-type"
-      },
-      {
-        "start": 137,
-        "end": 143,
-        "className": "syntax-type"
-      },
-      {
-        "start": 143,
-        "end": 144,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 151,
-        "end": 168,
-        "className": "syntax-function"
-      },
-      {
-        "start": 169,
-        "end": 177,
-        "className": "syntax-type"
-      },
-      {
-        "start": 178,
-        "end": 188,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 190,
-        "end": 195,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 196,
-        "end": 199,
-        "className": "syntax-type"
-      },
-      {
-        "start": 199,
-        "end": 200,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 201,
-        "end": 204,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 206,
-        "end": 212,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 225,
-        "end": 230,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 231,
-        "end": 240,
-        "className": "syntax-type"
-      },
-      {
-        "start": 241,
-        "end": 246,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 247,
-        "end": 248,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 249,
-        "end": 261,
-        "className": "syntax-function"
-      },
-      {
-        "start": 262,
-        "end": 264,
-        "className": "syntax-number"
-      },
-      {
-        "start": 266,
-        "end": 293,
-        "className": "syntax-string"
-      },
-      {
-        "start": 302,
-        "end": 304,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 306,
-        "end": 311,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 315,
-        "end": 316,
-        "className": "syntax-number"
-      },
-      {
-        "start": 326,
-        "end": 347,
-        "className": "syntax-function"
-      },
-      {
-        "start": 358,
-        "end": 365,
-        "className": "syntax-type"
-      },
-      {
-        "start": 366,
-        "end": 377,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 378,
-        "end": 379,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 380,
-        "end": 384,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 384,
-        "end": 386,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 386,
-        "end": 393,
-        "className": "syntax-property"
-      },
-      {
-        "start": 394,
-        "end": 402,
-        "className": "syntax-property"
-      },
-      {
-        "start": 410,
-        "end": 417,
-        "className": "syntax-type"
-      },
-      {
-        "start": 418,
-        "end": 430,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 431,
-        "end": 432,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 433,
-        "end": 437,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 437,
-        "end": 439,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 439,
-        "end": 446,
-        "className": "syntax-property"
-      },
-      {
-        "start": 447,
-        "end": 456,
-        "className": "syntax-property"
-      },
-      {
-        "start": 464,
-        "end": 469,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 470,
-        "end": 479,
-        "className": "syntax-type"
-      },
-      {
-        "start": 480,
-        "end": 494,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 495,
-        "end": 496,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 497,
-        "end": 507,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 508,
-        "end": 509,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 510,
-        "end": 515,
-        "className": "syntax-function"
-      },
-      {
-        "start": 525,
-        "end": 532,
-        "className": "syntax-type"
-      },
-      {
-        "start": 533,
-        "end": 544,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 545,
-        "end": 549,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 549,
-        "end": 551,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 551,
-        "end": 562,
-        "className": "syntax-function"
-      },
-      {
-        "start": 563,
-        "end": 568,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 578,
-        "end": 585,
-        "className": "syntax-type"
-      },
-      {
-        "start": 586,
-        "end": 598,
-        "className": "syntax-function"
-      },
-      {
-        "start": 599,
-        "end": 610,
-        "className": "syntax-type"
-      },
-      {
-        "start": 630,
-        "end": 642,
-        "className": "syntax-type"
-      },
-      {
-        "start": 643,
-        "end": 650,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 651,
-        "end": 662,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 664,
-        "end": 669,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 671,
-        "end": 672,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 672,
-        "end": 676,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 688,
-        "end": 749,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 758,
-        "end": 818,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 827,
-        "end": 888,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 897,
-        "end": 958,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 967,
-        "end": 990,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1000,
-        "end": 1055,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1056,
-        "end": 1059,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1060,
-        "end": 1071,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1075,
-        "end": 1082,
-        "className": "syntax-number"
-      },
-      {
-        "start": 1106,
-        "end": 1115,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1116,
-        "end": 1120,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1120,
-        "end": 1122,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1122,
-        "end": 1129,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1169,
-        "end": 1181,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1182,
-        "end": 1193,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1194,
-        "end": 1195,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1196,
-        "end": 1210,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1251,
-        "end": 1258,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1258,
-        "end": 1259,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1259,
-        "end": 1264,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1264,
-        "end": 1265,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1266,
-        "end": 1272,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1279,
-        "end": 1284,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1308,
-        "end": 1317,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1318,
-        "end": 1322,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1322,
-        "end": 1324,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1324,
-        "end": 1331,
-        "className": "syntax-property"
-      },
-      {
-        "start": 1366,
-        "end": 1377,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1378,
-        "end": 1379,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1380,
-        "end": 1394,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1429,
-        "end": 1432,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1435,
-        "end": 1441,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1443,
-        "end": 1446,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1447,
-        "end": 1458,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1462,
-        "end": 1469,
-        "className": "syntax-number"
-      },
-      {
-        "start": 1478,
-        "end": 1480,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1481,
-        "end": 1501,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1503,
-        "end": 1518,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1546,
-        "end": 1573,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 1586,
-        "end": 1598,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1599,
-        "end": 1600,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1601,
-        "end": 1612,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1613,
-        "end": 1624,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1626,
-        "end": 1636,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1637,
-        "end": 1641,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1684,
-        "end": 1695,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1697,
-        "end": 1716,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1733,
-        "end": 1735,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1735,
-        "end": 1747,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1761,
-        "end": 1773,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1774,
-        "end": 1775,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 1776,
-        "end": 1787,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1788,
-        "end": 1798,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1799,
-        "end": 1803,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1807,
-        "end": 1819,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1860,
-        "end": 1872,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 1874,
-        "end": 1893,
-        "className": "syntax-function"
-      },
-      {
-        "start": 1918,
-        "end": 1922,
-        "className": "syntax-type"
-      },
-      {
-        "start": 1923,
-        "end": 1929,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 1954,
-        "end": 1999,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2012,
-        "end": 2018,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2019,
-        "end": 2030,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2059,
-        "end": 2066,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2067,
-        "end": 2075,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2077,
-        "end": 2084,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2087,
-        "end": 2109,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2124,
-        "end": 2138,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2138,
-        "end": 2139,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2140,
-        "end": 2148,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2165,
-        "end": 2185,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2200,
-        "end": 2211,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2212,
-        "end": 2219,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2220,
-        "end": 2225,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2227,
-        "end": 2241,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2241,
-        "end": 2242,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2243,
-        "end": 2246,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2264,
-        "end": 2272,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2273,
-        "end": 2278,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2281,
-        "end": 2288,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2289,
-        "end": 2294,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2295,
-        "end": 2296,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2297,
-        "end": 2298,
-        "className": "syntax-number"
-      },
-      {
-        "start": 2301,
-        "end": 2309,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2310,
-        "end": 2313,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2348,
-        "end": 2368,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2384,
-        "end": 2395,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2419,
-        "end": 2427,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2428,
-        "end": 2436,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2438,
-        "end": 2445,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2447,
-        "end": 2455,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2473,
-        "end": 2480,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2496,
-        "end": 2507,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2508,
-        "end": 2513,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2514,
-        "end": 2525,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2525,
-        "end": 2526,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2557,
-        "end": 2625,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2638,
-        "end": 2649,
-        "className": "syntax-type"
-      },
-      {
-        "start": 2650,
-        "end": 2662,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2663,
-        "end": 2674,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2675,
-        "end": 2676,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2677,
-        "end": 2691,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2693,
-        "end": 2700,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2716,
-        "end": 2728,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2729,
-        "end": 2730,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2736,
-        "end": 2770,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2801,
-        "end": 2812,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2814,
-        "end": 2824,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2825,
-        "end": 2829,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2862,
-        "end": 2873,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2875,
-        "end": 2894,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2912,
-        "end": 2914,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2914,
-        "end": 2926,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2940,
-        "end": 2987,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 3000,
-        "end": 3012,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3013,
-        "end": 3021,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3022,
-        "end": 3023,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3024,
-        "end": 3035,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3050,
-        "end": 3062,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3063,
-        "end": 3064,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3070,
-        "end": 3104,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3136,
-        "end": 3146,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3147,
-        "end": 3151,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3155,
-        "end": 3167,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3199,
-        "end": 3211,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3213,
-        "end": 3232,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3250,
-        "end": 3318,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 3331,
-        "end": 3343,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3344,
-        "end": 3352,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3353,
-        "end": 3354,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3355,
-        "end": 3366,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3380,
-        "end": 3392,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3393,
-        "end": 3400,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3401,
-        "end": 3402,
+        "end": 3006,
         "className": "syntax-operator"
       },
       {
-        "start": 3403,
-        "end": 3415,
+        "start": 3007,
+        "end": 3019,
         "className": "syntax-variable"
       }
     ]
@@ -32539,555 +32539,660 @@ export const codeSnippets = [
   {
     "language": "python",
     "name": "python/cpython_asyncio_tasks.py",
-    "code": "    def _done_callback(fut):\n        nonlocal nfinished\n        nfinished += 1\n\n        if outer is None or outer.done():\n            if not fut.cancelled():\n                # Mark exception retrieved.\n                fut.exception()\n            return\n\n        if not return_exceptions:\n            if fut.cancelled():\n                # Check if 'fut' is cancelled first, as\n                # 'fut.exception()' will *raise* a CancelledError\n                # instead of returning it.\n                exc = fut._make_cancelled_error()\n                outer.set_exception(exc)\n                return\n            else:\n                exc = fut.exception()\n                if exc is not None:\n                    outer.set_exception(exc)\n                    return\n\n        if nfinished == nfuts:\n            # All futures are done; create a list of results\n            # and set it to the 'outer' future.\n            results = []\n\n            for fut in children:\n                if fut.cancelled():\n                    # Check if 'fut' is cancelled first, as 'fut.exception()'\n                    # will *raise* a CancelledError instead of returning it.\n                    # Also, since we're adding the exception return value\n                    # to 'results' instead of raising it, don't bother\n                    # setting __context__.  This also lets us preserve\n                    # calling '_make_cancelled_error()' at most once.\n                    res = exceptions.CancelledError(\n                        '' if fut._cancel_message is None else\n                        fut._cancel_message)\n                else:\n                    res = fut.exception()\n                    if res is None:\n                        res = fut.result()\n                results.append(res)\n\n            if outer._cancel_requested:\n                # If gather is being cancelled we must propagate the\n                # cancellation regardless of *return_exceptions* argument.\n                # See issue 32684.\n                exc = fut._make_cancelled_error()\n                outer.set_exception(exc)\n            else:\n                outer.set_result(results)\n\n    arg_to_fut = {}\n    children = []\n    nfuts = 0\n    nfinished = 0\n    done_futs = []\n    loop = None\n    outer = None  # bpo-46672\n    for arg in coros_or_futures:\n        if arg not in arg_to_fut:\n            fut = ensure_future(arg, loop=loop)\n            if loop is None:\n                loop = futures._get_loop(fut)\n            if fut is not arg:\n                # 'arg' was not a Future, therefore, 'fut' is a new\n                # Future created specifically for 'arg'.  Since the caller\n                # can't control it, disable the \"destroy pending task\"\n                # warning.\n                fut._log_destroy_pending = False\n\n            nfuts += 1\n            arg_to_fut[arg] = fut\n            if fut.done():\n                done_futs.append(fut)\n            else:\n                fut.add_done_callback(_done_callback)\n\n        else:\n            # There's a duplicate Future object in coros_or_futures.\n            fut = arg_to_fut[arg]\n\n        children.append(fut)\n\n    outer = _GatheringFuture(children, loop=loop)\n    # Run done callbacks after GatheringFuture created so any post-processing\n    # can be performed at this point\n    # optimization: in the special case that *all* futures finished eagerly,\n    # this will effectively complete the gather eagerly, with the last\n    # callback setting the result (or exception) on outer before returning it\n    for fut in done_futs:\n        _done_callback(fut)\n    return outer",
+    "code": "def _done_callback(fut):\n    nonlocal nfinished\n    nfinished += 1\n\n    if outer is None or outer.done():\n        if not fut.cancelled():\n            # Mark exception retrieved.\n            fut.exception()\n        return\n\n    if not return_exceptions:\n        if fut.cancelled():\n            # Check if 'fut' is cancelled first, as\n            # 'fut.exception()' will *raise* a CancelledError\n            # instead of returning it.\n            exc = fut._make_cancelled_error()\n            outer.set_exception(exc)\n            return\n        else:\n            exc = fut.exception()\n            if exc is not None:\n                outer.set_exception(exc)\n                return\n\n    if nfinished == nfuts:\n        # All futures are done; create a list of results\n        # and set it to the 'outer' future.\n        results = []\n\n        for fut in children:\n            if fut.cancelled():\n                # Check if 'fut' is cancelled first, as 'fut.exception()'\n                # will *raise* a CancelledError instead of returning it.\n                # Also, since we're adding the exception return value\n                # to 'results' instead of raising it, don't bother\n                # setting __context__.  This also lets us preserve\n                # calling '_make_cancelled_error()' at most once.\n                res = exceptions.CancelledError(\n                    '' if fut._cancel_message is None else\n                    fut._cancel_message)\n            else:\n                res = fut.exception()\n                if res is None:\n                    res = fut.result()\n            results.append(res)\n\n        if outer._cancel_requested:\n            # If gather is being cancelled we must propagate the\n            # cancellation regardless of *return_exceptions* argument.\n            # See issue 32684.\n            exc = fut._make_cancelled_error()\n            outer.set_exception(exc)\n        else:\n            outer.set_result(results)\n\narg_to_fut = {}\nchildren = []\nnfuts = 0\nnfinished = 0\ndone_futs = []\nloop = None\nouter = None  # bpo-46672\nfor arg in coros_or_futures:\n    if arg not in arg_to_fut:\n        fut = ensure_future(arg, loop=loop)\n        if loop is None:\n            loop = futures._get_loop(fut)\n        if fut is not arg:\n            # 'arg' was not a Future, therefore, 'fut' is a new\n            # Future created specifically for 'arg'.  Since the caller\n            # can't control it, disable the \"destroy pending task\"\n            # warning.\n            fut._log_destroy_pending = False\n\n        nfuts += 1\n        arg_to_fut[arg] = fut\n        if fut.done():\n            done_futs.append(fut)\n        else:\n            fut.add_done_callback(_done_callback)\n\n    else:\n        # There's a duplicate Future object in coros_or_futures.\n        fut = arg_to_fut[arg]\n\n    children.append(fut)\n\nouter = _GatheringFuture(children, loop=loop)\n# Run done callbacks after GatheringFuture created so any post-processing\n# can be performed at this point\n# optimization: in the special case that *all* futures finished eagerly,\n# this will effectively complete the gather eagerly, with the last\n# callback setting the result (or exception) on outer before returning it\nfor fut in done_futs:\n    _done_callback(fut)\nreturn outer",
     "spans": [
       {
-        "start": 4,
-        "end": 7,
+        "start": 0,
+        "end": 3,
         "className": "syntax-keyword"
       },
       {
-        "start": 8,
-        "end": 22,
+        "start": 4,
+        "end": 18,
         "className": "syntax-function"
       },
       {
-        "start": 23,
-        "end": 26,
+        "start": 19,
+        "end": 22,
         "className": "syntax-variable"
       },
       {
-        "start": 37,
-        "end": 45,
+        "start": 29,
+        "end": 37,
         "className": "syntax-keyword"
       },
       {
-        "start": 46,
-        "end": 55,
+        "start": 38,
+        "end": 47,
         "className": "syntax-variable"
       },
       {
-        "start": 64,
-        "end": 73,
+        "start": 52,
+        "end": 61,
         "className": "syntax-variable"
       },
       {
-        "start": 74,
-        "end": 76,
+        "start": 62,
+        "end": 64,
         "className": "syntax-operator"
       },
       {
-        "start": 77,
-        "end": 78,
+        "start": 65,
+        "end": 66,
         "className": "syntax-number"
       },
       {
-        "start": 88,
-        "end": 90,
+        "start": 72,
+        "end": 74,
         "className": "syntax-keyword"
       },
       {
-        "start": 91,
-        "end": 96,
+        "start": 75,
+        "end": 80,
         "className": "syntax-variable"
       },
       {
-        "start": 97,
-        "end": 99,
+        "start": 81,
+        "end": 83,
         "className": "syntax-operator"
       },
       {
-        "start": 100,
-        "end": 104,
+        "start": 84,
+        "end": 88,
         "className": "syntax-constant"
       },
       {
-        "start": 105,
-        "end": 107,
+        "start": 89,
+        "end": 91,
         "className": "syntax-operator"
       },
       {
-        "start": 108,
-        "end": 113,
+        "start": 92,
+        "end": 97,
         "className": "syntax-variable"
+      },
+      {
+        "start": 98,
+        "end": 102,
+        "className": "syntax-property"
       },
       {
         "start": 114,
-        "end": 118,
-        "className": "syntax-property"
-      },
-      {
-        "start": 134,
-        "end": 136,
+        "end": 116,
         "className": "syntax-keyword"
       },
       {
-        "start": 137,
-        "end": 140,
+        "start": 117,
+        "end": 120,
         "className": "syntax-operator"
       },
       {
-        "start": 141,
-        "end": 144,
+        "start": 121,
+        "end": 124,
         "className": "syntax-variable"
       },
       {
-        "start": 145,
-        "end": 154,
+        "start": 125,
+        "end": 134,
         "className": "syntax-property"
       },
       {
-        "start": 174,
-        "end": 201,
+        "start": 150,
+        "end": 177,
         "className": "syntax-comment"
       },
       {
-        "start": 218,
-        "end": 221,
+        "start": 190,
+        "end": 193,
         "className": "syntax-variable"
       },
       {
-        "start": 222,
-        "end": 231,
+        "start": 194,
+        "end": 203,
         "className": "syntax-property"
       },
       {
-        "start": 246,
-        "end": 252,
+        "start": 214,
+        "end": 220,
         "className": "syntax-keyword"
       },
       {
-        "start": 262,
-        "end": 264,
+        "start": 226,
+        "end": 228,
         "className": "syntax-keyword"
       },
       {
-        "start": 265,
-        "end": 268,
+        "start": 229,
+        "end": 232,
         "className": "syntax-operator"
       },
       {
-        "start": 269,
-        "end": 286,
+        "start": 233,
+        "end": 250,
         "className": "syntax-variable"
       },
       {
-        "start": 300,
-        "end": 302,
+        "start": 260,
+        "end": 262,
         "className": "syntax-keyword"
       },
       {
-        "start": 303,
-        "end": 306,
+        "start": 263,
+        "end": 266,
         "className": "syntax-variable"
       },
       {
-        "start": 307,
-        "end": 316,
+        "start": 267,
+        "end": 276,
         "className": "syntax-property"
       },
       {
-        "start": 336,
-        "end": 375,
+        "start": 292,
+        "end": 331,
         "className": "syntax-comment"
       },
       {
-        "start": 392,
-        "end": 441,
+        "start": 344,
+        "end": 393,
         "className": "syntax-comment"
       },
       {
-        "start": 458,
-        "end": 484,
+        "start": 406,
+        "end": 432,
         "className": "syntax-comment"
       },
       {
-        "start": 501,
-        "end": 504,
+        "start": 445,
+        "end": 448,
         "className": "syntax-variable"
       },
       {
-        "start": 505,
-        "end": 506,
+        "start": 449,
+        "end": 450,
         "className": "syntax-operator"
       },
       {
-        "start": 507,
+        "start": 451,
+        "end": 454,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 455,
+        "end": 476,
+        "className": "syntax-property"
+      },
+      {
+        "start": 491,
+        "end": 496,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 497,
         "end": 510,
-        "className": "syntax-variable"
+        "className": "syntax-property"
       },
       {
         "start": 511,
-        "end": 532,
-        "className": "syntax-property"
-      },
-      {
-        "start": 551,
-        "end": 556,
+        "end": 514,
         "className": "syntax-variable"
       },
       {
-        "start": 557,
+        "start": 528,
+        "end": 534,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 543,
+        "end": 547,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 561,
+        "end": 564,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 565,
+        "end": 566,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 567,
         "end": 570,
-        "className": "syntax-property"
+        "className": "syntax-variable"
       },
       {
         "start": 571,
-        "end": 574,
+        "end": 580,
+        "className": "syntax-property"
+      },
+      {
+        "start": 595,
+        "end": 597,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 598,
+        "end": 601,
         "className": "syntax-variable"
       },
       {
-        "start": 592,
-        "end": 598,
-        "className": "syntax-keyword"
+        "start": 602,
+        "end": 608,
+        "className": "syntax-operator"
       },
       {
-        "start": 611,
-        "end": 615,
-        "className": "syntax-keyword"
+        "start": 609,
+        "end": 613,
+        "className": "syntax-constant"
       },
       {
-        "start": 633,
+        "start": 631,
         "end": 636,
         "className": "syntax-variable"
       },
       {
         "start": 637,
-        "end": 638,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 639,
-        "end": 642,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 643,
-        "end": 652,
+        "end": 650,
         "className": "syntax-property"
       },
       {
-        "start": 671,
-        "end": 673,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 674,
-        "end": 677,
+        "start": 651,
+        "end": 654,
         "className": "syntax-variable"
       },
       {
-        "start": 678,
-        "end": 684,
+        "start": 672,
+        "end": 678,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 684,
+        "end": 686,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 687,
+        "end": 696,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 697,
+        "end": 699,
         "className": "syntax-operator"
       },
       {
-        "start": 685,
-        "end": 689,
-        "className": "syntax-constant"
-      },
-      {
-        "start": 711,
-        "end": 716,
+        "start": 700,
+        "end": 705,
         "className": "syntax-variable"
       },
       {
-        "start": 717,
-        "end": 730,
-        "className": "syntax-property"
-      },
-      {
-        "start": 731,
-        "end": 734,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 756,
-        "end": 762,
-        "className": "syntax-keyword"
+        "start": 715,
+        "end": 763,
+        "className": "syntax-comment"
       },
       {
         "start": 772,
-        "end": 774,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 775,
-        "end": 784,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 785,
-        "end": 787,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 788,
-        "end": 793,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 807,
-        "end": 855,
+        "end": 807,
         "className": "syntax-comment"
       },
       {
-        "start": 868,
-        "end": 903,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 916,
-        "end": 923,
+        "start": 816,
+        "end": 823,
         "className": "syntax-variable"
       },
       {
-        "start": 924,
-        "end": 925,
+        "start": 824,
+        "end": 825,
         "className": "syntax-operator"
       },
       {
-        "start": 942,
-        "end": 945,
+        "start": 838,
+        "end": 841,
         "className": "syntax-keyword"
       },
       {
-        "start": 946,
-        "end": 949,
+        "start": 842,
+        "end": 845,
         "className": "syntax-variable"
       },
       {
-        "start": 950,
-        "end": 952,
+        "start": 846,
+        "end": 848,
         "className": "syntax-operator"
       },
       {
-        "start": 953,
-        "end": 961,
+        "start": 849,
+        "end": 857,
         "className": "syntax-variable"
       },
       {
-        "start": 979,
-        "end": 981,
+        "start": 871,
+        "end": 873,
         "className": "syntax-keyword"
       },
       {
-        "start": 982,
-        "end": 985,
+        "start": 874,
+        "end": 877,
         "className": "syntax-variable"
       },
       {
-        "start": 986,
-        "end": 995,
+        "start": 878,
+        "end": 887,
         "className": "syntax-property"
       },
       {
-        "start": 1019,
-        "end": 1076,
+        "start": 907,
+        "end": 964,
         "className": "syntax-comment"
       },
       {
-        "start": 1097,
-        "end": 1153,
+        "start": 981,
+        "end": 1037,
         "className": "syntax-comment"
       },
       {
-        "start": 1174,
-        "end": 1227,
+        "start": 1054,
+        "end": 1107,
         "className": "syntax-comment"
       },
       {
-        "start": 1248,
-        "end": 1298,
+        "start": 1124,
+        "end": 1174,
         "className": "syntax-comment"
       },
       {
-        "start": 1319,
-        "end": 1369,
+        "start": 1191,
+        "end": 1241,
         "className": "syntax-comment"
       },
       {
-        "start": 1390,
-        "end": 1439,
+        "start": 1258,
+        "end": 1307,
         "className": "syntax-comment"
       },
       {
-        "start": 1460,
-        "end": 1463,
+        "start": 1324,
+        "end": 1327,
         "className": "syntax-variable"
       },
       {
-        "start": 1464,
-        "end": 1465,
+        "start": 1328,
+        "end": 1329,
         "className": "syntax-operator"
       },
       {
-        "start": 1466,
-        "end": 1476,
+        "start": 1330,
+        "end": 1340,
         "className": "syntax-variable"
       },
       {
-        "start": 1477,
-        "end": 1491,
+        "start": 1341,
+        "end": 1355,
         "className": "syntax-property"
       },
       {
-        "start": 1517,
-        "end": 1519,
+        "start": 1377,
+        "end": 1379,
         "className": "syntax-string"
       },
       {
-        "start": 1520,
-        "end": 1522,
+        "start": 1380,
+        "end": 1382,
         "className": "syntax-keyword"
       },
       {
-        "start": 1523,
-        "end": 1526,
+        "start": 1383,
+        "end": 1386,
         "className": "syntax-variable"
       },
       {
-        "start": 1527,
-        "end": 1542,
+        "start": 1387,
+        "end": 1402,
         "className": "syntax-property"
       },
       {
-        "start": 1543,
-        "end": 1545,
+        "start": 1403,
+        "end": 1405,
         "className": "syntax-operator"
       },
       {
-        "start": 1546,
-        "end": 1550,
+        "start": 1406,
+        "end": 1410,
         "className": "syntax-constant"
       },
       {
-        "start": 1551,
-        "end": 1555,
+        "start": 1411,
+        "end": 1415,
         "className": "syntax-keyword"
       },
       {
-        "start": 1580,
-        "end": 1583,
+        "start": 1436,
+        "end": 1439,
         "className": "syntax-variable"
       },
       {
-        "start": 1584,
-        "end": 1599,
+        "start": 1440,
+        "end": 1455,
         "className": "syntax-property"
       },
       {
-        "start": 1617,
-        "end": 1621,
+        "start": 1469,
+        "end": 1473,
         "className": "syntax-keyword"
       },
       {
-        "start": 1643,
-        "end": 1646,
+        "start": 1491,
+        "end": 1494,
         "className": "syntax-variable"
       },
       {
-        "start": 1647,
-        "end": 1648,
+        "start": 1495,
+        "end": 1496,
         "className": "syntax-operator"
       },
       {
-        "start": 1649,
-        "end": 1652,
+        "start": 1497,
+        "end": 1500,
         "className": "syntax-variable"
       },
       {
-        "start": 1653,
-        "end": 1662,
+        "start": 1501,
+        "end": 1510,
         "className": "syntax-property"
       },
       {
-        "start": 1685,
-        "end": 1687,
+        "start": 1529,
+        "end": 1531,
         "className": "syntax-keyword"
       },
       {
-        "start": 1688,
-        "end": 1691,
+        "start": 1532,
+        "end": 1535,
         "className": "syntax-variable"
       },
       {
-        "start": 1692,
-        "end": 1694,
+        "start": 1536,
+        "end": 1538,
         "className": "syntax-operator"
       },
       {
-        "start": 1695,
-        "end": 1699,
+        "start": 1539,
+        "end": 1543,
         "className": "syntax-constant"
       },
       {
-        "start": 1725,
-        "end": 1728,
+        "start": 1565,
+        "end": 1568,
         "className": "syntax-variable"
       },
       {
-        "start": 1729,
-        "end": 1730,
+        "start": 1569,
+        "end": 1570,
         "className": "syntax-operator"
       },
       {
-        "start": 1731,
-        "end": 1734,
+        "start": 1571,
+        "end": 1574,
         "className": "syntax-variable"
       },
       {
-        "start": 1735,
-        "end": 1741,
+        "start": 1575,
+        "end": 1581,
         "className": "syntax-property"
       },
       {
-        "start": 1760,
-        "end": 1767,
+        "start": 1596,
+        "end": 1603,
         "className": "syntax-variable"
       },
       {
-        "start": 1768,
-        "end": 1774,
+        "start": 1604,
+        "end": 1610,
         "className": "syntax-property"
       },
       {
-        "start": 1775,
-        "end": 1778,
+        "start": 1611,
+        "end": 1614,
         "className": "syntax-variable"
       },
       {
-        "start": 1793,
-        "end": 1795,
+        "start": 1625,
+        "end": 1627,
         "className": "syntax-keyword"
       },
       {
-        "start": 1796,
-        "end": 1801,
+        "start": 1628,
+        "end": 1633,
         "className": "syntax-variable"
       },
       {
-        "start": 1802,
+        "start": 1634,
+        "end": 1651,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1665,
+        "end": 1717,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 1730,
+        "end": 1788,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 1801,
         "end": 1819,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 1832,
+        "end": 1835,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1836,
+        "end": 1837,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1838,
+        "end": 1841,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1842,
+        "end": 1863,
         "className": "syntax-property"
       },
       {
-        "start": 1837,
-        "end": 1889,
-        "className": "syntax-comment"
+        "start": 1878,
+        "end": 1883,
+        "className": "syntax-variable"
       },
       {
-        "start": 1906,
-        "end": 1964,
-        "className": "syntax-comment"
+        "start": 1884,
+        "end": 1897,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1898,
+        "end": 1901,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1911,
+        "end": 1915,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 1929,
+        "end": 1934,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1935,
+        "end": 1945,
+        "className": "syntax-property"
+      },
+      {
+        "start": 1946,
+        "end": 1953,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1956,
+        "end": 1966,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1967,
+        "end": 1968,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1972,
+        "end": 1980,
+        "className": "syntax-variable"
       },
       {
         "start": 1981,
-        "end": 1999,
-        "className": "syntax-comment"
+        "end": 1982,
+        "className": "syntax-operator"
       },
       {
-        "start": 2016,
+        "start": 1986,
+        "end": 1991,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 1992,
+        "end": 1993,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 1994,
+        "end": 1995,
+        "className": "syntax-number"
+      },
+      {
+        "start": 1996,
+        "end": 2005,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2006,
+        "end": 2007,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2008,
+        "end": 2009,
+        "className": "syntax-number"
+      },
+      {
+        "start": 2010,
         "end": 2019,
         "className": "syntax-variable"
       },
@@ -33097,553 +33202,448 @@ export const codeSnippets = [
         "className": "syntax-operator"
       },
       {
-        "start": 2022,
-        "end": 2025,
+        "start": 2025,
+        "end": 2029,
         "className": "syntax-variable"
       },
       {
-        "start": 2026,
-        "end": 2047,
-        "className": "syntax-property"
+        "start": 2030,
+        "end": 2031,
+        "className": "syntax-operator"
       },
       {
-        "start": 2066,
-        "end": 2071,
+        "start": 2032,
+        "end": 2036,
+        "className": "syntax-constant"
+      },
+      {
+        "start": 2037,
+        "end": 2042,
         "className": "syntax-variable"
       },
       {
-        "start": 2072,
-        "end": 2085,
-        "className": "syntax-property"
+        "start": 2043,
+        "end": 2044,
+        "className": "syntax-operator"
       },
       {
-        "start": 2086,
-        "end": 2089,
+        "start": 2045,
+        "end": 2049,
+        "className": "syntax-constant"
+      },
+      {
+        "start": 2051,
+        "end": 2062,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2063,
+        "end": 2066,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2067,
+        "end": 2070,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2071,
+        "end": 2073,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2074,
+        "end": 2090,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2096,
+        "end": 2098,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2099,
+        "end": 2102,
         "className": "syntax-variable"
       },
       {
         "start": 2103,
-        "end": 2107,
+        "end": 2109,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2110,
+        "end": 2120,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2130,
+        "end": 2133,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2134,
+        "end": 2135,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2136,
+        "end": 2149,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2150,
+        "end": 2153,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2155,
+        "end": 2159,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2159,
+        "end": 2160,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2160,
+        "end": 2164,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2174,
+        "end": 2176,
         "className": "syntax-keyword"
       },
       {
-        "start": 2125,
-        "end": 2130,
+        "start": 2177,
+        "end": 2181,
         "className": "syntax-variable"
       },
       {
-        "start": 2131,
-        "end": 2141,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2142,
-        "end": 2149,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2156,
-        "end": 2166,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2167,
-        "end": 2168,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2176,
+        "start": 2182,
         "end": 2184,
-        "className": "syntax-variable"
+        "className": "syntax-operator"
       },
       {
         "start": 2185,
-        "end": 2186,
-        "className": "syntax-operator"
+        "end": 2189,
+        "className": "syntax-constant"
       },
       {
-        "start": 2194,
-        "end": 2199,
+        "start": 2203,
+        "end": 2207,
         "className": "syntax-variable"
       },
       {
-        "start": 2200,
-        "end": 2201,
+        "start": 2208,
+        "end": 2209,
         "className": "syntax-operator"
       },
       {
-        "start": 2202,
-        "end": 2203,
-        "className": "syntax-number"
-      },
-      {
-        "start": 2208,
+        "start": 2210,
         "end": 2217,
         "className": "syntax-variable"
       },
       {
         "start": 2218,
-        "end": 2219,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2220,
-        "end": 2221,
-        "className": "syntax-number"
-      },
-      {
-        "start": 2226,
-        "end": 2235,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2236,
-        "end": 2237,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2245,
-        "end": 2249,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2250,
-        "end": 2251,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2252,
-        "end": 2256,
-        "className": "syntax-constant"
-      },
-      {
-        "start": 2261,
-        "end": 2266,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2267,
-        "end": 2268,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2269,
-        "end": 2273,
-        "className": "syntax-constant"
-      },
-      {
-        "start": 2275,
-        "end": 2286,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2291,
-        "end": 2294,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2295,
-        "end": 2298,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2299,
-        "end": 2301,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2302,
-        "end": 2318,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2328,
-        "end": 2330,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2331,
-        "end": 2334,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2335,
-        "end": 2341,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2342,
-        "end": 2352,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2366,
-        "end": 2369,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2370,
-        "end": 2371,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2372,
-        "end": 2385,
-        "className": "syntax-function"
-      },
-      {
-        "start": 2386,
-        "end": 2389,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2391,
-        "end": 2395,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2395,
-        "end": 2396,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2396,
-        "end": 2400,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2414,
-        "end": 2416,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2417,
-        "end": 2421,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2422,
-        "end": 2424,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2425,
-        "end": 2429,
-        "className": "syntax-constant"
-      },
-      {
-        "start": 2447,
-        "end": 2451,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2452,
-        "end": 2453,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2454,
-        "end": 2461,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2462,
-        "end": 2471,
+        "end": 2227,
         "className": "syntax-property"
       },
       {
-        "start": 2472,
-        "end": 2475,
+        "start": 2228,
+        "end": 2231,
         "className": "syntax-variable"
       },
       {
-        "start": 2489,
-        "end": 2491,
+        "start": 2241,
+        "end": 2243,
         "className": "syntax-keyword"
       },
       {
-        "start": 2492,
-        "end": 2495,
+        "start": 2244,
+        "end": 2247,
         "className": "syntax-variable"
       },
       {
-        "start": 2496,
-        "end": 2502,
+        "start": 2248,
+        "end": 2254,
         "className": "syntax-operator"
       },
       {
-        "start": 2503,
-        "end": 2506,
+        "start": 2255,
+        "end": 2258,
         "className": "syntax-variable"
+      },
+      {
+        "start": 2272,
+        "end": 2323,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2336,
+        "end": 2394,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2407,
+        "end": 2461,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2474,
+        "end": 2484,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2497,
+        "end": 2500,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2501,
+        "end": 2521,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2522,
+        "end": 2523,
+        "className": "syntax-operator"
       },
       {
         "start": 2524,
-        "end": 2575,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2592,
-        "end": 2650,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2667,
-        "end": 2721,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2738,
-        "end": 2748,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 2765,
-        "end": 2768,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2769,
-        "end": 2789,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2790,
-        "end": 2791,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 2792,
-        "end": 2797,
+        "end": 2529,
         "className": "syntax-constant"
       },
       {
-        "start": 2811,
-        "end": 2816,
+        "start": 2539,
+        "end": 2544,
         "className": "syntax-variable"
       },
       {
-        "start": 2817,
-        "end": 2819,
+        "start": 2545,
+        "end": 2547,
         "className": "syntax-operator"
       },
       {
-        "start": 2820,
-        "end": 2821,
+        "start": 2548,
+        "end": 2549,
         "className": "syntax-number"
       },
       {
+        "start": 2558,
+        "end": 2568,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2569,
+        "end": 2572,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2574,
+        "end": 2575,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2576,
+        "end": 2579,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2588,
+        "end": 2590,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2591,
+        "end": 2594,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2595,
+        "end": 2599,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2615,
+        "end": 2624,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2625,
+        "end": 2631,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2632,
+        "end": 2635,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2645,
+        "end": 2649,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2663,
+        "end": 2666,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2667,
+        "end": 2684,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2685,
+        "end": 2699,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2706,
+        "end": 2710,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 2720,
+        "end": 2776,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2785,
+        "end": 2788,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2789,
+        "end": 2790,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2791,
+        "end": 2801,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2802,
+        "end": 2805,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2812,
+        "end": 2820,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 2821,
+        "end": 2827,
+        "className": "syntax-property"
+      },
+      {
+        "start": 2828,
+        "end": 2831,
+        "className": "syntax-variable"
+      },
+      {
         "start": 2834,
-        "end": 2844,
+        "end": 2839,
         "className": "syntax-variable"
       },
       {
-        "start": 2845,
-        "end": 2848,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2850,
-        "end": 2851,
+        "start": 2840,
+        "end": 2841,
         "className": "syntax-operator"
       },
       {
-        "start": 2852,
-        "end": 2855,
+        "start": 2842,
+        "end": 2858,
+        "className": "syntax-function"
+      },
+      {
+        "start": 2859,
+        "end": 2867,
         "className": "syntax-variable"
       },
       {
-        "start": 2868,
-        "end": 2870,
-        "className": "syntax-keyword"
+        "start": 2869,
+        "end": 2873,
+        "className": "syntax-variable"
       },
       {
-        "start": 2871,
+        "start": 2873,
         "end": 2874,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 2874,
+        "end": 2878,
         "className": "syntax-variable"
       },
       {
-        "start": 2875,
-        "end": 2879,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2899,
-        "end": 2908,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2909,
-        "end": 2915,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2916,
-        "end": 2919,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2933,
-        "end": 2937,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 2955,
-        "end": 2958,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 2959,
-        "end": 2976,
-        "className": "syntax-property"
-      },
-      {
-        "start": 2977,
-        "end": 2991,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3002,
-        "end": 3006,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3020,
-        "end": 3076,
+        "start": 2880,
+        "end": 2953,
         "className": "syntax-comment"
       },
       {
-        "start": 3089,
-        "end": 3092,
+        "start": 2954,
+        "end": 2986,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 2987,
+        "end": 3059,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 3060,
+        "end": 3126,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 3127,
+        "end": 3200,
+        "className": "syntax-comment"
+      },
+      {
+        "start": 3201,
+        "end": 3204,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 3205,
+        "end": 3208,
         "className": "syntax-variable"
       },
       {
-        "start": 3093,
-        "end": 3094,
+        "start": 3209,
+        "end": 3211,
         "className": "syntax-operator"
       },
       {
-        "start": 3095,
-        "end": 3105,
+        "start": 3212,
+        "end": 3221,
         "className": "syntax-variable"
       },
       {
-        "start": 3106,
-        "end": 3109,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3120,
-        "end": 3128,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3129,
-        "end": 3135,
-        "className": "syntax-property"
-      },
-      {
-        "start": 3136,
-        "end": 3139,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3146,
-        "end": 3151,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3152,
-        "end": 3153,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3154,
-        "end": 3170,
+        "start": 3227,
+        "end": 3241,
         "className": "syntax-function"
       },
       {
-        "start": 3171,
-        "end": 3179,
+        "start": 3242,
+        "end": 3245,
         "className": "syntax-variable"
       },
       {
-        "start": 3181,
-        "end": 3185,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3185,
-        "end": 3186,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3186,
-        "end": 3190,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3196,
-        "end": 3269,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 3274,
-        "end": 3306,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 3311,
-        "end": 3383,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 3388,
-        "end": 3454,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 3459,
-        "end": 3532,
-        "className": "syntax-comment"
-      },
-      {
-        "start": 3537,
-        "end": 3540,
+        "start": 3247,
+        "end": 3253,
         "className": "syntax-keyword"
       },
       {
-        "start": 3541,
-        "end": 3544,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3545,
-        "end": 3547,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 3548,
-        "end": 3557,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3567,
-        "end": 3581,
-        "className": "syntax-function"
-      },
-      {
-        "start": 3582,
-        "end": 3585,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 3591,
-        "end": 3597,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 3598,
-        "end": 3603,
+        "start": 3254,
+        "end": 3259,
         "className": "syntax-variable"
       }
     ]
@@ -45217,312 +45217,362 @@ export const codeSnippets = [
   {
     "language": "typescript",
     "name": "typescript/typescript_span_map.ts",
-    "code": "    let result: U[] | undefined;\n    if (array !== undefined) {\n        result = [];\n        const len = array.length;\n        let previousKey: K | undefined;\n        let key: K | undefined;\n        let start = 0;\n        let pos = 0;\n        while (start < len) {\n            while (pos < len) {\n                const value = array[pos];\n                key = keyfn(value, pos);\n                if (pos === 0) {\n                    previousKey = key;\n                }\n                else if (key !== previousKey) {\n                    break;\n                }\n\n                pos++;\n            }\n\n            if (start < pos) {\n                const v = mapfn(array.slice(start, pos), previousKey!, start, pos);\n                if (v) {\n                    result.push(v);\n                }\n\n                start = pos;\n            }\n\n            previousKey = key;\n            pos++;\n        }\n    }\n\n    return result;\n}",
+    "code": "let result: U[] | undefined;\nif (array !== undefined) {\n    result = [];\n    const len = array.length;\n    let previousKey: K | undefined;\n    let key: K | undefined;\n    let start = 0;\n    let pos = 0;\n    while (start < len) {\n        while (pos < len) {\n            const value = array[pos];\n            key = keyfn(value, pos);\n            if (pos === 0) {\n                previousKey = key;\n            }\n            else if (key !== previousKey) {\n                break;\n            }\n\n            pos++;\n        }\n\n        if (start < pos) {\n            const v = mapfn(array.slice(start, pos), previousKey!, start, pos);\n            if (v) {\n                result.push(v);\n            }\n\n            start = pos;\n        }\n\n        previousKey = key;\n        pos++;\n    }\n}\n\nreturn result;\n}",
     "spans": [
       {
-        "start": 4,
-        "end": 7,
+        "start": 0,
+        "end": 3,
         "className": "syntax-keyword"
       },
       {
-        "start": 8,
-        "end": 14,
+        "start": 4,
+        "end": 10,
         "className": "syntax-variable"
+      },
+      {
+        "start": 12,
+        "end": 13,
+        "className": "syntax-type"
+      },
+      {
+        "start": 13,
+        "end": 15,
+        "className": "syntax-punctuation"
       },
       {
         "start": 16,
         "end": 17,
-        "className": "syntax-type"
-      },
-      {
-        "start": 17,
-        "end": 19,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 20,
-        "end": 21,
         "className": "syntax-operator"
       },
       {
-        "start": 22,
-        "end": 31,
+        "start": 18,
+        "end": 27,
         "className": "syntax-constant"
       },
       {
-        "start": 31,
-        "end": 32,
+        "start": 27,
+        "end": 28,
         "className": "syntax-punctuation"
       },
       {
-        "start": 37,
-        "end": 39,
+        "start": 29,
+        "end": 31,
         "className": "syntax-keyword"
       },
       {
-        "start": 40,
-        "end": 41,
+        "start": 32,
+        "end": 33,
         "className": "syntax-punctuation"
       },
       {
-        "start": 41,
-        "end": 46,
+        "start": 33,
+        "end": 38,
         "className": "syntax-variable"
       },
       {
-        "start": 47,
-        "end": 50,
+        "start": 39,
+        "end": 42,
         "className": "syntax-operator"
       },
       {
-        "start": 51,
-        "end": 60,
+        "start": 43,
+        "end": 52,
         "className": "syntax-constant"
+      },
+      {
+        "start": 52,
+        "end": 53,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 54,
+        "end": 55,
+        "className": "syntax-punctuation"
       },
       {
         "start": 60,
-        "end": 61,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 62,
-        "end": 63,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 72,
-        "end": 78,
+        "end": 66,
         "className": "syntax-variable"
       },
       {
-        "start": 79,
-        "end": 80,
+        "start": 67,
+        "end": 68,
         "className": "syntax-operator"
       },
       {
-        "start": 81,
-        "end": 84,
+        "start": 69,
+        "end": 72,
         "className": "syntax-punctuation"
       },
       {
-        "start": 93,
-        "end": 98,
+        "start": 77,
+        "end": 82,
         "className": "syntax-keyword"
       },
       {
-        "start": 99,
-        "end": 102,
+        "start": 83,
+        "end": 86,
         "className": "syntax-variable"
       },
       {
-        "start": 103,
-        "end": 104,
+        "start": 87,
+        "end": 88,
         "className": "syntax-operator"
       },
       {
-        "start": 105,
-        "end": 110,
+        "start": 89,
+        "end": 94,
         "className": "syntax-variable"
       },
       {
-        "start": 110,
-        "end": 111,
+        "start": 94,
+        "end": 95,
         "className": "syntax-punctuation"
       },
       {
-        "start": 111,
-        "end": 117,
+        "start": 95,
+        "end": 101,
         "className": "syntax-property"
       },
       {
-        "start": 117,
-        "end": 118,
+        "start": 101,
+        "end": 102,
         "className": "syntax-punctuation"
       },
       {
-        "start": 127,
-        "end": 130,
+        "start": 107,
+        "end": 110,
         "className": "syntax-keyword"
       },
       {
-        "start": 131,
-        "end": 142,
+        "start": 111,
+        "end": 122,
         "className": "syntax-variable"
       },
       {
-        "start": 144,
-        "end": 145,
+        "start": 124,
+        "end": 125,
         "className": "syntax-type"
       },
       {
-        "start": 146,
-        "end": 147,
+        "start": 126,
+        "end": 127,
         "className": "syntax-operator"
       },
       {
-        "start": 148,
-        "end": 157,
+        "start": 128,
+        "end": 137,
         "className": "syntax-constant"
       },
       {
-        "start": 157,
-        "end": 158,
+        "start": 137,
+        "end": 138,
         "className": "syntax-punctuation"
       },
       {
-        "start": 167,
-        "end": 170,
+        "start": 143,
+        "end": 146,
         "className": "syntax-keyword"
+      },
+      {
+        "start": 147,
+        "end": 150,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 152,
+        "end": 153,
+        "className": "syntax-type"
+      },
+      {
+        "start": 154,
+        "end": 155,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 156,
+        "end": 165,
+        "className": "syntax-constant"
+      },
+      {
+        "start": 165,
+        "end": 166,
+        "className": "syntax-punctuation"
       },
       {
         "start": 171,
         "end": 174,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 176,
-        "end": 177,
-        "className": "syntax-type"
-      },
-      {
-        "start": 178,
-        "end": 179,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 180,
-        "end": 189,
-        "className": "syntax-constant"
-      },
-      {
-        "start": 189,
-        "end": 190,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 199,
-        "end": 202,
         "className": "syntax-keyword"
       },
       {
-        "start": 203,
-        "end": 208,
+        "start": 175,
+        "end": 180,
         "className": "syntax-variable"
       },
       {
-        "start": 209,
-        "end": 210,
+        "start": 181,
+        "end": 182,
         "className": "syntax-operator"
       },
       {
-        "start": 211,
-        "end": 212,
+        "start": 183,
+        "end": 184,
         "className": "syntax-number"
       },
       {
-        "start": 212,
-        "end": 213,
+        "start": 184,
+        "end": 185,
         "className": "syntax-punctuation"
+      },
+      {
+        "start": 190,
+        "end": 193,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 194,
+        "end": 197,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 198,
+        "end": 199,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 200,
+        "end": 201,
+        "className": "syntax-number"
+      },
+      {
+        "start": 201,
+        "end": 202,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 207,
+        "end": 212,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 213,
+        "end": 214,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 214,
+        "end": 219,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 220,
+        "end": 221,
+        "className": "syntax-operator"
       },
       {
         "start": 222,
         "end": 225,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 226,
-        "end": 229,
         "className": "syntax-variable"
       },
       {
-        "start": 230,
-        "end": 231,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 232,
-        "end": 233,
-        "className": "syntax-number"
-      },
-      {
-        "start": 233,
-        "end": 234,
+        "start": 225,
+        "end": 226,
         "className": "syntax-punctuation"
+      },
+      {
+        "start": 227,
+        "end": 228,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 237,
+        "end": 242,
+        "className": "syntax-keyword"
       },
       {
         "start": 243,
-        "end": 248,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 249,
-        "end": 250,
+        "end": 244,
         "className": "syntax-punctuation"
       },
       {
-        "start": 250,
-        "end": 255,
+        "start": 244,
+        "end": 247,
         "className": "syntax-variable"
       },
       {
-        "start": 256,
-        "end": 257,
+        "start": 248,
+        "end": 249,
         "className": "syntax-operator"
       },
       {
-        "start": 258,
-        "end": 261,
+        "start": 250,
+        "end": 253,
         "className": "syntax-variable"
       },
       {
-        "start": 261,
-        "end": 262,
+        "start": 253,
+        "end": 254,
         "className": "syntax-punctuation"
       },
       {
-        "start": 263,
-        "end": 264,
+        "start": 255,
+        "end": 256,
         "className": "syntax-punctuation"
       },
       {
-        "start": 277,
-        "end": 282,
+        "start": 269,
+        "end": 274,
         "className": "syntax-keyword"
       },
       {
-        "start": 283,
-        "end": 284,
-        "className": "syntax-punctuation"
+        "start": 275,
+        "end": 280,
+        "className": "syntax-variable"
       },
       {
-        "start": 284,
-        "end": 287,
+        "start": 281,
+        "end": 282,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 283,
+        "end": 288,
         "className": "syntax-variable"
       },
       {
         "start": 288,
         "end": 289,
-        "className": "syntax-operator"
+        "className": "syntax-punctuation"
       },
       {
-        "start": 290,
-        "end": 293,
+        "start": 289,
+        "end": 292,
         "className": "syntax-variable"
       },
       {
-        "start": 293,
+        "start": 292,
         "end": 294,
         "className": "syntax-punctuation"
       },
       {
-        "start": 295,
-        "end": 296,
-        "className": "syntax-punctuation"
+        "start": 307,
+        "end": 310,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 311,
+        "end": 312,
+        "className": "syntax-operator"
       },
       {
         "start": 313,
         "end": 318,
-        "className": "syntax-keyword"
+        "className": "syntax-function"
+      },
+      {
+        "start": 318,
+        "end": 319,
+        "className": "syntax-punctuation"
       },
       {
         "start": 319,
@@ -45530,117 +45580,107 @@ export const codeSnippets = [
         "className": "syntax-variable"
       },
       {
-        "start": 325,
-        "end": 326,
+        "start": 324,
+        "end": 325,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 326,
+        "end": 329,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 329,
+        "end": 331,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 344,
+        "end": 346,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 347,
+        "end": 348,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 348,
+        "end": 351,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 352,
+        "end": 355,
         "className": "syntax-operator"
       },
       {
-        "start": 327,
-        "end": 332,
-        "className": "syntax-variable"
+        "start": 356,
+        "end": 357,
+        "className": "syntax-number"
       },
       {
-        "start": 332,
-        "end": 333,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 333,
-        "end": 336,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 336,
-        "end": 338,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 355,
+        "start": 357,
         "end": 358,
-        "className": "syntax-variable"
+        "className": "syntax-punctuation"
       },
       {
         "start": 359,
         "end": 360,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 361,
-        "end": 366,
-        "className": "syntax-function"
-      },
-      {
-        "start": 366,
-        "end": 367,
         "className": "syntax-punctuation"
-      },
-      {
-        "start": 367,
-        "end": 372,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 372,
-        "end": 373,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 374,
-        "end": 377,
-        "className": "syntax-variable"
       },
       {
         "start": 377,
-        "end": 379,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 396,
-        "end": 398,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 399,
-        "end": 400,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 400,
-        "end": 403,
+        "end": 388,
         "className": "syntax-variable"
       },
       {
-        "start": 404,
-        "end": 407,
+        "start": 389,
+        "end": 390,
         "className": "syntax-operator"
+      },
+      {
+        "start": 391,
+        "end": 394,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 394,
+        "end": 395,
+        "className": "syntax-punctuation"
       },
       {
         "start": 408,
         "end": 409,
-        "className": "syntax-number"
-      },
-      {
-        "start": 409,
-        "end": 410,
         "className": "syntax-punctuation"
       },
       {
-        "start": 411,
-        "end": 412,
+        "start": 422,
+        "end": 426,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 427,
+        "end": 429,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 430,
+        "end": 431,
         "className": "syntax-punctuation"
       },
       {
-        "start": 433,
-        "end": 444,
+        "start": 431,
+        "end": 434,
         "className": "syntax-variable"
       },
       {
-        "start": 445,
-        "end": 446,
+        "start": 435,
+        "end": 438,
         "className": "syntax-operator"
       },
       {
-        "start": 447,
+        "start": 439,
         "end": 450,
         "className": "syntax-variable"
       },
@@ -45650,259 +45690,294 @@ export const codeSnippets = [
         "className": "syntax-punctuation"
       },
       {
-        "start": 468,
-        "end": 469,
+        "start": 452,
+        "end": 453,
         "className": "syntax-punctuation"
       },
       {
-        "start": 486,
+        "start": 470,
+        "end": 475,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 475,
+        "end": 476,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 489,
         "end": 490,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 491,
-        "end": 493,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 494,
-        "end": 495,
         "className": "syntax-punctuation"
       },
       {
-        "start": 495,
-        "end": 498,
+        "start": 504,
+        "end": 507,
         "className": "syntax-variable"
       },
       {
-        "start": 499,
-        "end": 502,
+        "start": 507,
+        "end": 509,
         "className": "syntax-operator"
       },
       {
-        "start": 503,
-        "end": 514,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 514,
-        "end": 515,
+        "start": 509,
+        "end": 510,
         "className": "syntax-punctuation"
       },
       {
-        "start": 516,
-        "end": 517,
+        "start": 519,
+        "end": 520,
         "className": "syntax-punctuation"
       },
       {
-        "start": 538,
-        "end": 543,
+        "start": 530,
+        "end": 532,
         "className": "syntax-keyword"
       },
       {
-        "start": 543,
-        "end": 544,
+        "start": 533,
+        "end": 534,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 534,
+        "end": 539,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 540,
+        "end": 541,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 542,
+        "end": 545,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 545,
+        "end": 546,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 547,
+        "end": 548,
         "className": "syntax-punctuation"
       },
       {
         "start": 561,
-        "end": 562,
+        "end": 566,
+        "className": "syntax-keyword"
+      },
+      {
+        "start": 567,
+        "end": 568,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 569,
+        "end": 570,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 571,
+        "end": 576,
+        "className": "syntax-function"
+      },
+      {
+        "start": 576,
+        "end": 577,
         "className": "syntax-punctuation"
       },
       {
-        "start": 580,
-        "end": 583,
+        "start": 577,
+        "end": 582,
         "className": "syntax-variable"
+      },
+      {
+        "start": 582,
+        "end": 583,
+        "className": "syntax-punctuation"
       },
       {
         "start": 583,
-        "end": 585,
-        "className": "syntax-operator"
+        "end": 588,
+        "className": "syntax-function"
       },
       {
-        "start": 585,
-        "end": 586,
+        "start": 588,
+        "end": 589,
         "className": "syntax-punctuation"
+      },
+      {
+        "start": 589,
+        "end": 594,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 594,
+        "end": 595,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 596,
+        "end": 599,
+        "className": "syntax-variable"
       },
       {
         "start": 599,
-        "end": 600,
+        "end": 601,
         "className": "syntax-punctuation"
+      },
+      {
+        "start": 602,
+        "end": 613,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 613,
+        "end": 614,
+        "className": "syntax-operator"
       },
       {
         "start": 614,
-        "end": 616,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 617,
-        "end": 618,
+        "end": 615,
         "className": "syntax-punctuation"
       },
       {
-        "start": 618,
-        "end": 623,
+        "start": 616,
+        "end": 621,
         "className": "syntax-variable"
       },
       {
-        "start": 624,
-        "end": 625,
-        "className": "syntax-operator"
+        "start": 621,
+        "end": 622,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 623,
+        "end": 626,
+        "className": "syntax-variable"
       },
       {
         "start": 626,
-        "end": 629,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 629,
-        "end": 630,
+        "end": 628,
         "className": "syntax-punctuation"
       },
       {
-        "start": 631,
-        "end": 632,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 649,
-        "end": 654,
+        "start": 641,
+        "end": 643,
         "className": "syntax-keyword"
       },
       {
-        "start": 655,
-        "end": 656,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 657,
-        "end": 658,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 659,
-        "end": 664,
-        "className": "syntax-function"
-      },
-      {
-        "start": 664,
-        "end": 665,
+        "start": 644,
+        "end": 645,
         "className": "syntax-punctuation"
       },
       {
-        "start": 665,
-        "end": 670,
+        "start": 645,
+        "end": 646,
         "className": "syntax-variable"
       },
       {
-        "start": 670,
-        "end": 671,
+        "start": 646,
+        "end": 647,
         "className": "syntax-punctuation"
       },
       {
-        "start": 671,
-        "end": 676,
-        "className": "syntax-function"
+        "start": 648,
+        "end": 649,
+        "className": "syntax-punctuation"
       },
       {
-        "start": 676,
+        "start": 666,
+        "end": 672,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 672,
+        "end": 673,
+        "className": "syntax-punctuation"
+      },
+      {
+        "start": 673,
         "end": 677,
-        "className": "syntax-punctuation"
+        "className": "syntax-function"
       },
       {
         "start": 677,
-        "end": 682,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 682,
-        "end": 683,
+        "end": 678,
         "className": "syntax-punctuation"
       },
       {
-        "start": 684,
-        "end": 687,
+        "start": 678,
+        "end": 679,
         "className": "syntax-variable"
       },
       {
-        "start": 687,
-        "end": 689,
+        "start": 679,
+        "end": 681,
         "className": "syntax-punctuation"
       },
       {
-        "start": 690,
-        "end": 701,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 701,
-        "end": 702,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 702,
-        "end": 703,
+        "start": 694,
+        "end": 695,
         "className": "syntax-punctuation"
-      },
-      {
-        "start": 704,
-        "end": 709,
-        "className": "syntax-variable"
       },
       {
         "start": 709,
-        "end": 710,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 711,
         "end": 714,
         "className": "syntax-variable"
       },
       {
-        "start": 714,
+        "start": 715,
         "end": 716,
-        "className": "syntax-punctuation"
+        "className": "syntax-operator"
       },
       {
-        "start": 733,
-        "end": 735,
-        "className": "syntax-keyword"
-      },
-      {
-        "start": 736,
-        "end": 737,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 737,
-        "end": 738,
+        "start": 717,
+        "end": 720,
         "className": "syntax-variable"
       },
       {
-        "start": 738,
-        "end": 739,
+        "start": 720,
+        "end": 721,
         "className": "syntax-punctuation"
       },
       {
-        "start": 740,
-        "end": 741,
+        "start": 730,
+        "end": 731,
         "className": "syntax-punctuation"
       },
       {
-        "start": 762,
-        "end": 768,
+        "start": 741,
+        "end": 752,
         "className": "syntax-variable"
+      },
+      {
+        "start": 753,
+        "end": 754,
+        "className": "syntax-operator"
+      },
+      {
+        "start": 755,
+        "end": 758,
+        "className": "syntax-variable"
+      },
+      {
+        "start": 758,
+        "end": 759,
+        "className": "syntax-punctuation"
       },
       {
         "start": 768,
-        "end": 769,
-        "className": "syntax-punctuation"
+        "end": 771,
+        "className": "syntax-variable"
       },
       {
-        "start": 769,
+        "start": 771,
         "end": 773,
-        "className": "syntax-function"
+        "className": "syntax-operator"
       },
       {
         "start": 773,
@@ -45910,108 +45985,33 @@ export const codeSnippets = [
         "className": "syntax-punctuation"
       },
       {
-        "start": 774,
-        "end": 775,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 775,
-        "end": 777,
+        "start": 779,
+        "end": 780,
         "className": "syntax-punctuation"
       },
       {
-        "start": 794,
-        "end": 795,
+        "start": 781,
+        "end": 782,
         "className": "syntax-punctuation"
       },
       {
-        "start": 813,
-        "end": 818,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 819,
-        "end": 820,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 821,
-        "end": 824,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 824,
-        "end": 825,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 838,
-        "end": 839,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 853,
-        "end": 864,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 865,
-        "end": 866,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 867,
-        "end": 870,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 870,
-        "end": 871,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 884,
-        "end": 887,
-        "className": "syntax-variable"
-      },
-      {
-        "start": 887,
-        "end": 889,
-        "className": "syntax-operator"
-      },
-      {
-        "start": 889,
-        "end": 890,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 899,
-        "end": 900,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 905,
-        "end": 906,
-        "className": "syntax-punctuation"
-      },
-      {
-        "start": 912,
-        "end": 918,
+        "start": 784,
+        "end": 790,
         "className": "syntax-keyword"
       },
       {
-        "start": 919,
-        "end": 925,
+        "start": 791,
+        "end": 797,
         "className": "syntax-variable"
       },
       {
-        "start": 925,
-        "end": 926,
+        "start": 797,
+        "end": 798,
         "className": "syntax-punctuation"
       },
       {
-        "start": 927,
-        "end": 928,
+        "start": 799,
+        "end": 800,
         "className": "syntax-punctuation"
       }
     ]
