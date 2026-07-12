@@ -614,6 +614,27 @@ function renderLevels() {
   );
 }
 
+function syncPracticeWindowHeight() {
+  practiceWindow.style.removeProperty("--practice-window-height");
+  if (!isCodeLevel()) {
+    return;
+  }
+
+  const style = getComputedStyle(practiceWindow);
+  const lineHeight = Number.parseFloat(style.lineHeight);
+  const targetHeight = Number.parseFloat(style.height);
+  if (!Number.isFinite(lineHeight) || lineHeight <= 0 || !Number.isFinite(targetHeight)) {
+    return;
+  }
+
+  const lineCount = Math.max(Math.floor(targetHeight / lineHeight), 1);
+  practiceWindow.style.setProperty("--practice-window-height", `${lineCount * lineHeight}px`);
+}
+
+function streamOffsetTop(element) {
+  return element.getBoundingClientRect().top - wordStream.getBoundingClientRect().top;
+}
+
 function revealCurrent() {
   const current = document.getElementById("current-char");
   if (current === null) {
@@ -627,7 +648,7 @@ function revealCurrent() {
     current.classList.contains("break") && previous?.classList.contains("break")
       ? previous.querySelector(".line-start-marker")
       : null;
-  const currentTop = lineStart?.offsetTop ?? current.offsetTop;
+  const currentTop = lineStart === null ? streamOffsetTop(current) : streamOffsetTop(lineStart);
   const currentBottom = currentTop + lineHeight;
   const topEdge = practiceWindow.scrollTop + practiceWindow.clientHeight * 0.3;
   const bottomEdge = practiceWindow.scrollTop + practiceWindow.clientHeight * 0.7;
@@ -635,6 +656,10 @@ function revealCurrent() {
   if (currentTop < topEdge || currentBottom > bottomEdge) {
     const visibleLines = Math.max(Math.floor(practiceWindow.clientHeight / lineHeight), 1);
     const targetTop = currentTop - lineHeight * Math.floor(visibleLines * 0.4);
+    if (isCodeLevel()) {
+      practiceWindow.scrollTop = Math.max(targetTop, 0);
+      return;
+    }
     const snappedTop = Math.max(Math.round(targetTop / lineHeight) * lineHeight, 0);
     practiceWindow.scrollTo({
       top: snappedTop,
@@ -674,7 +699,11 @@ function positionCursor() {
     lineStart?.offsetLeft ??
     (anchor === null ? current.offsetLeft : anchor.offsetLeft + anchor.offsetWidth);
   const y =
-    (lineStart?.offsetTop ?? (anchor === null ? current.offsetTop : anchor.offsetTop)) +
+    (lineStart === null
+      ? anchor === null
+        ? streamOffsetTop(current)
+        : streamOffsetTop(anchor)
+      : streamOffsetTop(lineStart)) +
     lineHeight * 0.78;
   cursorElement.style.width = current.classList.contains("space")
     ? spaceCursorWidth(current, previous, x, lineHeight)
@@ -711,8 +740,10 @@ function renderStream() {
 
   practiceWindow.classList.toggle("syntax-highlighting", isCodeLevel());
   practiceWindow.classList.toggle("blocked", blocked);
+  syncPracticeWindowHeight();
   wordStream.replaceChildren(fragment, cursorElement);
   requestAnimationFrame(() => {
+    syncPracticeWindowHeight();
     positionCursor();
     revealCurrent();
   });
@@ -794,6 +825,14 @@ function handleKeydown(event) {
 
 app.addEventListener("keydown", handleKeydown);
 app.addEventListener("pointerdown", () => app.focus());
+window.addEventListener("resize", () => {
+  syncPracticeWindowHeight();
+  requestAnimationFrame(() => {
+    syncPracticeWindowHeight();
+    positionCursor();
+    revealCurrent();
+  });
+});
 setInterval(() => {
   now = performance.now();
   renderStats();
