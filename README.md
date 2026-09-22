@@ -3,11 +3,6 @@
 Minimal typing trainer for QWERTY, Dvorak, Colemak-DH, and my custom keyboard
 layout "Baremak".
 
-> [!NOTE]
-> Due to GitHub's historic unreliability, active development is hosted on
-> [Forgejo](https://forge.barrettruth.com/barrettruth/ts).
-> GitHub is maintained as a read-only mirror.
-
 ## Levels
 
 The typing trainer is inspired by https://learn.dvorak.nl. "Levels" test
@@ -46,4 +41,3 @@ custom layer
 ~ = [ { (   ) } ] - + `
 % ^ * _ ?   : ; ' "
 ```
-
